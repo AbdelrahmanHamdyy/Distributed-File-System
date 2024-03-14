@@ -6,68 +6,47 @@ package master;
 
 // Define service for Master Tracker
 service MasterTrackerService {
-    // RPC method for registering a new file
+    // Heartbeat service for DataNode
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+    // Upload file service for DataNode
+    rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+
+    // Register service for DataNode
     rpc RegisterFile(RegisterFileRequest) returns (RegisterFileResponse);
 
-    // RPC method for updating file location
-    rpc UpdateFileLocation(UpdateFileLocationRequest) returns (UpdateFileLocationResponse);
-
-    // RPC method for updating data node status
-    rpc UpdateDataNodeStatus(UpdateDataNodeStatusRequest) returns (UpdateDataNodeStatusResponse);
-
-    // RPC method for looking up file location
-    rpc LookupFile(LookupFileRequest) returns (LookupFileResponse);
+    // Download file service for Client
+    rpc DownloadFile(DownloadFileRequest) returns (DownloadFileResponse);
 }
 
-// Define message types for requests and responses
+message HeartbeatRequest {
+    int32 dataNodeId = 1;
+}
 
-// Request to register a new file
+message HeartbeatResponse {
+    bool success = 1;
+}
+
+message UploadFileRequest {}
+
+message UploadFileResponse {
+    string address = 1;
+}
+
 message RegisterFileRequest {
-    string file_name = 1;
-    string data_keeper_node = 2;
-    string file_path = 3;
+    string fileName = 1;
+    string filePath = 2;
+    int32 dataNodeId = 3;
 }
 
-// Response for registering a new file
 message RegisterFileResponse {
     bool success = 1;
-    string message = 2;
 }
 
-// Request to update file location
-message UpdateFileLocationRequest {
-    string file_name = 1;
-    string new_data_keeper_node = 2;
-    string new_file_path = 3;
+message DownloadFileRequest {
+    string fileName = 1;
 }
 
-// Response for updating file location
-message UpdateFileLocationResponse {
-    bool success = 1;
-    string message = 2;
-}
-
-// Request to update data node status
-message UpdateDataNodeStatusRequest {
-    string data_keeper_node = 1;
-    bool is_alive = 2;
-}
-
-// Response for updating data node status
-message UpdateDataNodeStatusResponse {
-    bool success = 1;
-    string message = 2;
-}
-
-// Request to look up file location
-message LookupFileRequest {
-    string file_name = 1;
-}
-
-// Response for file location lookup
-message LookupFileResponse {
-    string data_keeper_node = 1;
-    string file_path = 2;
-    bool success = 3;
-    string message = 4;
+message DownloadFileResponse {
+    repeated string addresses = 1;
 }
