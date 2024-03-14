@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+option go_package = "wireless_lab_1/grpc/capitalize";
+
+package capitalize;
+
+// Metadata for a file
+message FileMetadata {
+  string name = 1;
+  bytes data = 2;
+}
+
+// A keepalive ping
+message KeepalivePing {
+  string nodeID = 1;
+}
+
+// Empty message
+message Empty {}
+
+// The service that the Data Keeper provides
+service DataKeeperService {
+  // Store a file
+  rpc Store(FileMetadata) returns (Empty) {}
+
+  // Retrieve a file
+  rpc Retrieve(FileMetadata) returns (FileMetadata) {}
+
+  // Send a keepalive ping
+  rpc SendPing(KeepalivePing) returns (Empty) {}
+}
