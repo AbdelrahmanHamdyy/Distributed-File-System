@@ -19,24 +19,24 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	MasterTrackerService_RegisterFile_FullMethodName         = "/master.MasterTrackerService/RegisterFile"
-	MasterTrackerService_UpdateFileLocation_FullMethodName   = "/master.MasterTrackerService/UpdateFileLocation"
-	MasterTrackerService_UpdateDataNodeStatus_FullMethodName = "/master.MasterTrackerService/UpdateDataNodeStatus"
-	MasterTrackerService_LookupFile_FullMethodName           = "/master.MasterTrackerService/LookupFile"
+	MasterTrackerService_Heartbeat_FullMethodName    = "/master.MasterTrackerService/Heartbeat"
+	MasterTrackerService_UploadFile_FullMethodName   = "/master.MasterTrackerService/UploadFile"
+	MasterTrackerService_RegisterFile_FullMethodName = "/master.MasterTrackerService/RegisterFile"
+	MasterTrackerService_DownloadFile_FullMethodName = "/master.MasterTrackerService/DownloadFile"
 )
 
 // MasterTrackerServiceClient is the client API for MasterTrackerService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MasterTrackerServiceClient interface {
-	// RPC method for registering a new file
+	// Heartbeat service for DataNode
+	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
+	// Upload file service for DataNode
+	UploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error)
+	// Register service for DataNode
 	RegisterFile(ctx context.Context, in *RegisterFileRequest, opts ...grpc.CallOption) (*RegisterFileResponse, error)
-	// RPC method for updating file location
-	UpdateFileLocation(ctx context.Context, in *UpdateFileLocationRequest, opts ...grpc.CallOption) (*UpdateFileLocationResponse, error)
-	// RPC method for updating data node status
-	UpdateDataNodeStatus(ctx context.Context, in *UpdateDataNodeStatusRequest, opts ...grpc.CallOption) (*UpdateDataNodeStatusResponse, error)
-	// RPC method for looking up file location
-	LookupFile(ctx context.Context, in *LookupFileRequest, opts ...grpc.CallOption) (*LookupFileResponse, error)
+	// Download file service for Client
+	DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (*DownloadFileResponse, error)
 }
 
 type masterTrackerServiceClient struct {
@@ -45,6 +45,24 @@ type masterTrackerServiceClient struct {
 
 func NewMasterTrackerServiceClient(cc grpc.ClientConnInterface) MasterTrackerServiceClient {
 	return &masterTrackerServiceClient{cc}
+}
+
+func (c *masterTrackerServiceClient) Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
+	out := new(HeartbeatResponse)
+	err := c.cc.Invoke(ctx, MasterTrackerService_Heartbeat_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *masterTrackerServiceClient) UploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error) {
+	out := new(UploadFileResponse)
+	err := c.cc.Invoke(ctx, MasterTrackerService_UploadFile_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *masterTrackerServiceClient) RegisterFile(ctx context.Context, in *RegisterFileRequest, opts ...grpc.CallOption) (*RegisterFileResponse, error) {
@@ -56,27 +74,9 @@ func (c *masterTrackerServiceClient) RegisterFile(ctx context.Context, in *Regis
 	return out, nil
 }
 
-func (c *masterTrackerServiceClient) UpdateFileLocation(ctx context.Context, in *UpdateFileLocationRequest, opts ...grpc.CallOption) (*UpdateFileLocationResponse, error) {
-	out := new(UpdateFileLocationResponse)
-	err := c.cc.Invoke(ctx, MasterTrackerService_UpdateFileLocation_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *masterTrackerServiceClient) UpdateDataNodeStatus(ctx context.Context, in *UpdateDataNodeStatusRequest, opts ...grpc.CallOption) (*UpdateDataNodeStatusResponse, error) {
-	out := new(UpdateDataNodeStatusResponse)
-	err := c.cc.Invoke(ctx, MasterTrackerService_UpdateDataNodeStatus_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *masterTrackerServiceClient) LookupFile(ctx context.Context, in *LookupFileRequest, opts ...grpc.CallOption) (*LookupFileResponse, error) {
-	out := new(LookupFileResponse)
-	err := c.cc.Invoke(ctx, MasterTrackerService_LookupFile_FullMethodName, in, out, opts...)
+func (c *masterTrackerServiceClient) DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (*DownloadFileResponse, error) {
+	out := new(DownloadFileResponse)
+	err := c.cc.Invoke(ctx, MasterTrackerService_DownloadFile_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,14 +87,14 @@ func (c *masterTrackerServiceClient) LookupFile(ctx context.Context, in *LookupF
 // All implementations must embed UnimplementedMasterTrackerServiceServer
 // for forward compatibility
 type MasterTrackerServiceServer interface {
-	// RPC method for registering a new file
+	// Heartbeat service for DataNode
+	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	// Upload file service for DataNode
+	UploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error)
+	// Register service for DataNode
 	RegisterFile(context.Context, *RegisterFileRequest) (*RegisterFileResponse, error)
-	// RPC method for updating file location
-	UpdateFileLocation(context.Context, *UpdateFileLocationRequest) (*UpdateFileLocationResponse, error)
-	// RPC method for updating data node status
-	UpdateDataNodeStatus(context.Context, *UpdateDataNodeStatusRequest) (*UpdateDataNodeStatusResponse, error)
-	// RPC method for looking up file location
-	LookupFile(context.Context, *LookupFileRequest) (*LookupFileResponse, error)
+	// Download file service for Client
+	DownloadFile(context.Context, *DownloadFileRequest) (*DownloadFileResponse, error)
 	mustEmbedUnimplementedMasterTrackerServiceServer()
 }
 
@@ -102,17 +102,17 @@ type MasterTrackerServiceServer interface {
 type UnimplementedMasterTrackerServiceServer struct {
 }
 
+func (UnimplementedMasterTrackerServiceServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
+}
+func (UnimplementedMasterTrackerServiceServer) UploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UploadFile not implemented")
+}
 func (UnimplementedMasterTrackerServiceServer) RegisterFile(context.Context, *RegisterFileRequest) (*RegisterFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterFile not implemented")
 }
-func (UnimplementedMasterTrackerServiceServer) UpdateFileLocation(context.Context, *UpdateFileLocationRequest) (*UpdateFileLocationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateFileLocation not implemented")
-}
-func (UnimplementedMasterTrackerServiceServer) UpdateDataNodeStatus(context.Context, *UpdateDataNodeStatusRequest) (*UpdateDataNodeStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateDataNodeStatus not implemented")
-}
-func (UnimplementedMasterTrackerServiceServer) LookupFile(context.Context, *LookupFileRequest) (*LookupFileResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LookupFile not implemented")
+func (UnimplementedMasterTrackerServiceServer) DownloadFile(context.Context, *DownloadFileRequest) (*DownloadFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DownloadFile not implemented")
 }
 func (UnimplementedMasterTrackerServiceServer) mustEmbedUnimplementedMasterTrackerServiceServer() {}
 
@@ -125,6 +125,42 @@ type UnsafeMasterTrackerServiceServer interface {
 
 func RegisterMasterTrackerServiceServer(s grpc.ServiceRegistrar, srv MasterTrackerServiceServer) {
 	s.RegisterService(&MasterTrackerService_ServiceDesc, srv)
+}
+
+func _MasterTrackerService_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HeartbeatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterTrackerServiceServer).Heartbeat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterTrackerService_Heartbeat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterTrackerServiceServer).Heartbeat(ctx, req.(*HeartbeatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MasterTrackerService_UploadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterTrackerServiceServer).UploadFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterTrackerService_UploadFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterTrackerServiceServer).UploadFile(ctx, req.(*UploadFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _MasterTrackerService_RegisterFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -145,56 +181,20 @@ func _MasterTrackerService_RegisterFile_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MasterTrackerService_UpdateFileLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateFileLocationRequest)
+func _MasterTrackerService_DownloadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadFileRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MasterTrackerServiceServer).UpdateFileLocation(ctx, in)
+		return srv.(MasterTrackerServiceServer).DownloadFile(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MasterTrackerService_UpdateFileLocation_FullMethodName,
+		FullMethod: MasterTrackerService_DownloadFile_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MasterTrackerServiceServer).UpdateFileLocation(ctx, req.(*UpdateFileLocationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MasterTrackerService_UpdateDataNodeStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateDataNodeStatusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MasterTrackerServiceServer).UpdateDataNodeStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MasterTrackerService_UpdateDataNodeStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MasterTrackerServiceServer).UpdateDataNodeStatus(ctx, req.(*UpdateDataNodeStatusRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MasterTrackerService_LookupFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LookupFileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MasterTrackerServiceServer).LookupFile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MasterTrackerService_LookupFile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MasterTrackerServiceServer).LookupFile(ctx, req.(*LookupFileRequest))
+		return srv.(MasterTrackerServiceServer).DownloadFile(ctx, req.(*DownloadFileRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -207,20 +207,20 @@ var MasterTrackerService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MasterTrackerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "Heartbeat",
+			Handler:    _MasterTrackerService_Heartbeat_Handler,
+		},
+		{
+			MethodName: "UploadFile",
+			Handler:    _MasterTrackerService_UploadFile_Handler,
+		},
+		{
 			MethodName: "RegisterFile",
 			Handler:    _MasterTrackerService_RegisterFile_Handler,
 		},
 		{
-			MethodName: "UpdateFileLocation",
-			Handler:    _MasterTrackerService_UpdateFileLocation_Handler,
-		},
-		{
-			MethodName: "UpdateDataNodeStatus",
-			Handler:    _MasterTrackerService_UpdateDataNodeStatus_Handler,
-		},
-		{
-			MethodName: "LookupFile",
-			Handler:    _MasterTrackerService_LookupFile_Handler,
+			MethodName: "DownloadFile",
+			Handler:    _MasterTrackerService_DownloadFile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
