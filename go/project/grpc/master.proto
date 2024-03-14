@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+option go_package = "project/grpc";
+
+// Define package name
+package grpc;
+
+// Define service for Master Tracker
+service MasterTrackerService {
+    // RPC method for registering a new file
+    rpc RegisterFile(RegisterFileRequest) returns (RegisterFileResponse);
+
+    // RPC method for updating file location
+    rpc UpdateFileLocation(UpdateFileLocationRequest) returns (UpdateFileLocationResponse);
+
+    // RPC method for updating data node status
+    rpc UpdateDataNodeStatus(UpdateDataNodeStatusRequest) returns (UpdateDataNodeStatusResponse);
+
+    // RPC method for looking up file location
+    rpc LookupFile(LookupFileRequest) returns (LookupFileResponse);
+}
+
+// Define message types for requests and responses
+
+// Request to register a new file
+message RegisterFileRequest {
+    string file_name = 1;
+    string data_keeper_node = 2;
+    string file_path = 3;
+}
+
+// Response for registering a new file
+message RegisterFileResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// Request to update file location
+message UpdateFileLocationRequest {
+    string file_name = 1;
+    string new_data_keeper_node = 2;
+    string new_file_path = 3;
+}
+
+// Response for updating file location
+message UpdateFileLocationResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// Request to update data node status
+message UpdateDataNodeStatusRequest {
+    string data_keeper_node = 1;
+    bool is_alive = 2;
+}
+
+// Response for updating data node status
+message UpdateDataNodeStatusResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// Request to look up file location
+message LookupFileRequest {
+    string file_name = 1;
+}
+
+// Response for file location lookup
+message LookupFileResponse {
+    string data_keeper_node = 1;
+    string file_path = 2;
+    bool success = 3;
+    string message = 4;
+}
