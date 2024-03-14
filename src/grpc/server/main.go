@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	pb "project/grpc" // Import the generated package with the correct path
+	pb "src/grpc/master" // Import the generated package
 
 	"google.golang.org/grpc"
 )

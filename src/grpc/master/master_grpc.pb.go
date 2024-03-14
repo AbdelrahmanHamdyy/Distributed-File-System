@@ -2,11 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v5.26.0
-// source: project/grpc/master.proto
+// source: src/grpc/master/master.proto
 
-// Define package name
-
-package grpc
+package master
 
 import (
 	context "context"
@@ -21,10 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	MasterTrackerService_RegisterFile_FullMethodName         = "/grpc.MasterTrackerService/RegisterFile"
-	MasterTrackerService_UpdateFileLocation_FullMethodName   = "/grpc.MasterTrackerService/UpdateFileLocation"
-	MasterTrackerService_UpdateDataNodeStatus_FullMethodName = "/grpc.MasterTrackerService/UpdateDataNodeStatus"
-	MasterTrackerService_LookupFile_FullMethodName           = "/grpc.MasterTrackerService/LookupFile"
+	MasterTrackerService_RegisterFile_FullMethodName         = "/master.MasterTrackerService/RegisterFile"
+	MasterTrackerService_UpdateFileLocation_FullMethodName   = "/master.MasterTrackerService/UpdateFileLocation"
+	MasterTrackerService_UpdateDataNodeStatus_FullMethodName = "/master.MasterTrackerService/UpdateDataNodeStatus"
+	MasterTrackerService_LookupFile_FullMethodName           = "/master.MasterTrackerService/LookupFile"
 )
 
 // MasterTrackerServiceClient is the client API for MasterTrackerService service.
@@ -205,7 +203,7 @@ func _MasterTrackerService_LookupFile_Handler(srv interface{}, ctx context.Conte
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var MasterTrackerService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "grpc.MasterTrackerService",
+	ServiceName: "master.MasterTrackerService",
 	HandlerType: (*MasterTrackerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -226,5 +224,5 @@ var MasterTrackerService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "project/grpc/master.proto",
+	Metadata: "src/grpc/master/master.proto",
 }
