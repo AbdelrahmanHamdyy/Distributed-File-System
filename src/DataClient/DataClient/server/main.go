@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 
-	pb "wireless_lab_1/grpc/capitalize" // Import the generated package
+	pb "src/DataClient/DataClient/filetransfer" // Import the generated package
 
 	"google.golang.org/grpc"
 )
@@ -16,8 +15,9 @@ type textServer struct {
 }
 
 func (s *textServer) Capitalize(ctx context.Context, req *pb.TextRequest) (*pb.TextResponse, error) {
-	text := req.GetText()
-	capitalizedText := strings.ToUpper(text)
+	// text := req.GetText()
+	// capitalizedText := strings.ToUpper(text)
+	capitalizedText := "localhost:30000"
 	return &pb.TextResponse{CapitalizedText: capitalizedText}, nil
 }
 

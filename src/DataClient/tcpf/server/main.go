@@ -2,38 +2,35 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
-	"strings"
+	"os"
 )
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	// Buffer to read incoming data
-	buffer := make([]byte, 1024)
-
-	// Read data from client
-	n, err := conn.Read(buffer)
+	// Create a new file to save the received .mp4 file
+	file, err := os.Create("received.mp4")
 	if err != nil {
-		fmt.Println("Error reading:", err.Error())
+		fmt.Println("Error creating file:", err.Error())
+		return
+	}
+	defer file.Close()
+
+	// Receive .mp4 file data from client and save it to the file
+	_, err = io.Copy(file, conn)
+	if err != nil {
+		fmt.Println("Error receiving file:", err.Error())
 		return
 	}
 
-	// Convert received data to string and capitalize it
-	receivedText := strings.TrimSpace(string(buffer[:n]))
-	capitalizedText := strings.ToUpper(receivedText)
-
-	// Send capitalized text back to client
-	_, err = conn.Write([]byte(capitalizedText))
-	if err != nil {
-		fmt.Println("Error writing:", err.Error())
-		return
-	}
+	fmt.Println("File received and saved: received.mp4")
 }
 
 func main() {
 	// Listen for incoming connections on port 8080
-	listener, err := net.Listen("tcp", "localhost:8080")
+	listener, err := net.Listen("tcp", "localhost:30000")
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		return
