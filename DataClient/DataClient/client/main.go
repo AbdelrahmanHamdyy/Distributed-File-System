@@ -8,7 +8,9 @@ import (
 	"net"
 	"os"
 	"strings"
+
 	pb "wireless_lab_1/grpc/capitalize" // Import the generated package
+	"wireless_lab_1/grpc/filetransfer"  // Import the generated package
 
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
@@ -60,6 +62,7 @@ func uploadFile(filePath string , dataKeeperPort string) {
 	fmt.Println("File sent successfully!")
 }
 
+// function handle connection
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -106,9 +109,118 @@ func downloadFile( dataKeeperPort string) {
 	}
 }
 
-func main() {
-	// Load the environment variables from the .env file
+// filetransfer service
+
+func test() {
+	conn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+
+	// Create a client for the PortNumberService
+	portClient := filetransfer.NewPortNumberServiceClient(conn)
+
+	// Send a port number to the server
+	port := "8080" // Example port number
+	portResponse, err := portClient.SendPortNumber(context.Background(), &filetransfer.PortNumberRequest{PortNumber: port})
+	if err != nil {
+		log.Fatalf("could not send port number: %v", err)
+	}
+
+	// Print the response from the server
+	if portResponse.Success {
+		fmt.Println("Port number sent successfully")
+	} else {
+		fmt.Println("Failed to send port number")
+	}
+
+	// Create a client for the SuccessService
+	successClient := filetransfer.NewSuccessServiceClient(conn)
+
+	// Report success to the server
+	successResponse, err := successClient.ReportSuccess(context.Background(), &filetransfer.SuccessRequest{Success: true})
+	if err != nil {
+		log.Fatalf("could not report success: %v", err)
+	}
+
+	// Print the response from the server
+	if successResponse.Success {
+		fmt.Println("Success reported to the server")
+	} else {
+		fmt.Println("Failed to report success to the server")
+	}
+}
+
+
+////////////////////////PROTO//////////////////////////////////
+// Define a struct to implement the PortNumberService server
+var portNum string = ""
+type portNumberServer struct{
+	filetransfer.UnimplementedPortNumberServiceServer
+}
+
+// Implement the SendPortNumber RPC method
+func (s *portNumberServer) SendPortNumber(ctx context.Context, request *filetransfer.PortNumberRequest) (*filetransfer.SuccessResponse, error) {
+	port := request.GetPortNumber()
+	fmt.Println("Received port number:", port)
 	
+	// Perform any necessary processing here
+	portNum = port
+	
+	return &filetransfer.SuccessResponse{Success: true}, nil
+}
+
+// Define a struct to implement the SuccessService server
+type successServer struct{
+	filetransfer.UnimplementedSuccessServiceServer
+}
+
+// Implement the ReportSuccess RPC method
+func (s *successServer) ReportSuccess(ctx context.Context, request *filetransfer.SuccessRequest) (*filetransfer.SuccessResponse, error) {
+	success := request.GetSuccess()
+	if success {
+			fmt.Println("Operation was successful")
+	} else {
+			fmt.Println("Operation failed")
+	}
+	
+	// Perform any necessary processing here
+	
+	return &filetransfer.SuccessResponse{Success: true}, nil
+}
+
+func myServer(){
+	// Create a TCP listener on port 8080
+	lis, err := net.Listen("tcp", ":8081")
+	if err != nil {
+			log.Fatalf("failed to listen: %v", err)
+	}
+	
+	// Create a gRPC server
+	grpcServer := grpc.NewServer()
+	
+	// Register the PortNumberService server
+	filetransfer.RegisterPortNumberServiceServer(grpcServer, &portNumberServer{})
+	
+	// Register the SuccessService server
+	filetransfer.RegisterSuccessServiceServer(grpcServer, &successServer{})
+	
+	// print 
+	fmt.Println("Server started. Listening on port 8081...")
+	// Start the gRPC server
+	if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+	}
+}
+///////////////////////////////////////////////////////
+func main() {
+
+	///////////////////
+	// test()
+	go myServer()
+	//////////////////
+	// Load the environment variables from the .env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")

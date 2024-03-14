@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package filetransfer;
+
+option go_package = "wireless_lab_1/grpc/filetransfer";
+
+message PortNumberRequest {
+    string port_number = 1;
+}
+
+message SuccessResponse {
+    bool success = 1;
+}
+
+message SuccessRequest {
+    bool success = 1;
+}
+
+service PortNumberService {
+    rpc SendPortNumber(PortNumberRequest) returns (SuccessResponse);
+}
+
+service SuccessService {
+    rpc ReportSuccess(SuccessRequest) returns (SuccessResponse);
+}
