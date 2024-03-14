@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v5.26.0
-// source: src/grpc/master/master.proto
+// source: src/grpc/master.proto
 
-package master
+package grpc
 
 import (
 	context "context"
@@ -224,5 +224,5 @@ var MasterTrackerService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "src/grpc/master/master.proto",
+	Metadata: "src/grpc/master.proto",
 }
