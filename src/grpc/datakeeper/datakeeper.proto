@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "wireless_lab_1/grpc/capitalize";
+option go_package = "wireless_lab_1/grpc/datakeeper";
 
-package capitalize;
+package datakeeper;
 
 // Metadata for a file
 message FileMetadata {

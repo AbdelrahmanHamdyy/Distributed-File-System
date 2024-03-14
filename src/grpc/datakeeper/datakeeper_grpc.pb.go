@@ -4,7 +4,7 @@
 // - protoc             v5.26.0
 // source: datakeeper.proto
 
-package capitalize
+package datakeeper
 
 import (
 	context "context"
@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	DataKeeperService_Store_FullMethodName    = "/capitalize.DataKeeperService/Store"
-	DataKeeperService_Retrieve_FullMethodName = "/capitalize.DataKeeperService/Retrieve"
-	DataKeeperService_SendPing_FullMethodName = "/capitalize.DataKeeperService/SendPing"
+	DataKeeperService_Store_FullMethodName    = "/datakeeper.DataKeeperService/Store"
+	DataKeeperService_Retrieve_FullMethodName = "/datakeeper.DataKeeperService/Retrieve"
+	DataKeeperService_SendPing_FullMethodName = "/datakeeper.DataKeeperService/SendPing"
 )
 
 // DataKeeperServiceClient is the client API for DataKeeperService service.
@@ -168,7 +168,7 @@ func _DataKeeperService_SendPing_Handler(srv interface{}, ctx context.Context, d
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var DataKeeperService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "capitalize.DataKeeperService",
+	ServiceName: "datakeeper.DataKeeperService",
 	HandlerType: (*DataKeeperServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
