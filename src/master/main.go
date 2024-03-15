@@ -211,11 +211,6 @@ func main() {
 
 	populateDataKeepers()
 
-	// print dataNodeLookupTable
-	for _, dataNode := range dataNodeLookupTable {
-		fmt.Println(dataNode)
-	}
-
 	s := grpc.NewServer()
 	pb.RegisterMasterTrackerServiceServer(s, &masterServer{})
 	fmt.Println("Server started. Listening on port 8080...")
