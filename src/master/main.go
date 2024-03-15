@@ -40,17 +40,11 @@ func (s *masterServer) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) 
 }
 
 func (s *masterServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) (*pb.UploadFileResponse, error) {
-	println("rpc called!\n")
 	dataNodeId := rand.Intn(numDataNodes)
-	println("data node id %s\n", dataNodeId)
-	println("Data node %b", len(dataNodeLookupTable))
-	// for !dataNodeLookupTable[dataNodeId].isAlive {
-	// println("Loop\n")
-	// dataNodeId = rand.Intn(numDataNodes)
-	// }
-	println("After for loop \n", dataNodeLookupTable[0].address)
-	// nodeAddr := dataNodeLookupTable[0].address
-	nodeAddr := "test address"
+	for !dataNodeLookupTable[dataNodeId].isAlive {
+		dataNodeId = rand.Intn(numDataNodes)
+	}
+	nodeAddr := dataNodeLookupTable[0].address
 	return &pb.UploadFileResponse{Address: nodeAddr}, nil
 }
 
@@ -197,6 +191,17 @@ func Replication() {
 	}
 }
 
+func populateDataKeepers() {
+	dataNodeData := dataNode{dataNodeId: 0, address: "dataNodeId1", isAlive: true}
+	dataNodeLookupTable[0] = dataNodeData
+
+	dataNodeData = dataNode{dataNodeId: 1, address: "dataNodeId2", isAlive: true}
+	dataNodeLookupTable[1] = dataNodeData
+
+	dataNodeData = dataNode{dataNodeId: 2, address: "dataNodeId3", isAlive: true}
+	dataNodeLookupTable[2] = dataNodeData
+}
+
 func main() {
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -204,17 +209,12 @@ func main() {
 		return
 	}
 
-	dataNodeData := dataNode{dataNodeId: 0, address: "dataNodeId1", isAlive: true}
+	populateDataKeepers()
 
-	dataNodeLookupTable = append(dataNodeLookupTable, dataNodeData)
-
-	dataNodeData = dataNode{dataNodeId: 1, address: "dataNodeId2", isAlive: true}
-
-	dataNodeLookupTable = append(dataNodeLookupTable, dataNodeData)
-
-	dataNodeData = dataNode{dataNodeId: 2, address: "dataNodeId3", isAlive: true}
-
-	dataNodeLookupTable = append(dataNodeLookupTable, dataNodeData)
+	// print dataNodeLookupTable
+	for _, dataNode := range dataNodeLookupTable {
+		fmt.Println(dataNode)
+	}
 
 	s := grpc.NewServer()
 	pb.RegisterMasterTrackerServiceServer(s, &masterServer{})
