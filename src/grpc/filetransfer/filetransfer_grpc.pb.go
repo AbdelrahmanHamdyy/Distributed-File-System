@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v5.26.0
-// source: filetransfer.proto
+// source: src/grpc/filetransfer/filetransfer.proto
 
 package filetransfer
 
@@ -105,5 +105,5 @@ var FileTransferService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "filetransfer.proto",
+	Metadata: "src/grpc/filetransfer/filetransfer.proto",
 }

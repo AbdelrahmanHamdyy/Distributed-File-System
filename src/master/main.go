@@ -12,20 +12,20 @@ import (
 	"google.golang.org/grpc"
 )
 
-const numDataNodes = 10
+const numDataNodes = 3
 
 type masterServer struct {
 	pb.UnimplementedMasterTrackerServiceServer
 }
 type dataNode struct {
 	dataNodeId int32
-	address string
-	isAlive bool
+	address    string
+	isAlive    bool
 }
 type FileMetadata struct {
-	FileName string // File name
-	DataNodeId int32 // Data Keeper node where the file is stored
-	FilePath string // File path on the Data Keeper node
+	FileName   string // File name
+	DataNodeId int32  // Data Keeper node where the file is stored
+	FilePath   string // File path on the Data Keeper node
 }
 
 var dataNodesHeartbeats = make([]int, numDataNodes)
@@ -40,11 +40,17 @@ func (s *masterServer) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) 
 }
 
 func (s *masterServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) (*pb.UploadFileResponse, error) {
+	println("rpc called!\n")
 	dataNodeId := rand.Intn(numDataNodes)
-	for !dataNodeLookupTable[dataNodeId].isAlive {
-		dataNodeId = rand.Intn(numDataNodes)
-	}
-	nodeAddr := dataNodeLookupTable[dataNodeId].address
+	println("data node id %s\n", dataNodeId)
+	println("Data node %b", len(dataNodeLookupTable))
+	// for !dataNodeLookupTable[dataNodeId].isAlive {
+	// println("Loop\n")
+	// dataNodeId = rand.Intn(numDataNodes)
+	// }
+	println("After for loop \n", dataNodeLookupTable[0].address)
+	// nodeAddr := dataNodeLookupTable[0].address
+	nodeAddr := "test address"
 	return &pb.UploadFileResponse{Address: nodeAddr}, nil
 }
 
@@ -117,7 +123,7 @@ func (s *masterServer) RegisterFile(ctx context.Context, req *pb.RegisterFileReq
 	filePath := req.GetFilePath()
 	fileMetadata := FileMetadata{FileName: fileName, DataNodeId: dataNodeId, FilePath: filePath}
 	fileLookupTable = append(fileLookupTable, fileMetadata)
-	notifyClient(fileName) // TODO: Integrate with client
+	notifyClient(fileName)                       // TODO: Integrate with client
 	chooseNodesToReplicate(fileName, dataNodeId) // TODO: Integrate with Data Keeper
 	return &pb.RegisterFileResponse{}, nil
 }
@@ -162,9 +168,9 @@ func Replication() {
 		}
 
 		for _, file := range fileLookupTable {
-			if len(fileMap[file.FileName]) < 3 { 
+			if len(fileMap[file.FileName]) < 3 {
 				// choose new data node ids for the fileName until the count is restored to 3, then notify the source and destination nodes to start copying
-				if len(fileMap[file.FileName]) == 2 { 
+				if len(fileMap[file.FileName]) == 2 {
 					destinationId := rand.Intn(numDataNodes)
 					for int32(destinationId) == fileMap[file.FileName][0] || int32(destinationId) == fileMap[file.FileName][1] || !dataNodeLookupTable[destinationId].isAlive {
 						destinationId = rand.Intn(numDataNodes)
@@ -183,7 +189,7 @@ func Replication() {
 					// 	return
 					// }
 					// fmt.Println("Replication Status:", resp.GetReplicationStatus())
-				} else if len(fileMap[file.FileName]) == 1 { 
+				} else if len(fileMap[file.FileName]) == 1 {
 					chooseNodesToReplicate(file.FileName, fileMap[file.FileName][0])
 				}
 			}
@@ -197,6 +203,18 @@ func main() {
 		fmt.Println("failed to listen:", err)
 		return
 	}
+
+	dataNodeData := dataNode{dataNodeId: 0, address: "dataNodeId1", isAlive: true}
+
+	dataNodeLookupTable = append(dataNodeLookupTable, dataNodeData)
+
+	dataNodeData = dataNode{dataNodeId: 1, address: "dataNodeId2", isAlive: true}
+
+	dataNodeLookupTable = append(dataNodeLookupTable, dataNodeData)
+
+	dataNodeData = dataNode{dataNodeId: 2, address: "dataNodeId3", isAlive: true}
+
+	dataNodeLookupTable = append(dataNodeLookupTable, dataNodeData)
 
 	s := grpc.NewServer()
 	pb.RegisterMasterTrackerServiceServer(s, &masterServer{})

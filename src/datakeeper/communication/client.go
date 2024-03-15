@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	pb "wireless_lab_1/grpc/datakeeper"
-	"wireless_lab_1/grpc/filetransfer"
+	pb "src/grpc/datakeeper"
+	"src/grpc/filetransfer"
 
 	"google.golang.org/grpc"
 )
@@ -69,12 +69,13 @@ func (c *DataKeeperClient) SendKeepalivePing(ctx context.Context, nodeID string)
 	log.Printf("Keepalive ping sent successfully to node: %s", nodeID)
 	return nil
 }
+
 // define a main function
 func waitAndPrint(portNumber string) {
 	for {
-	time.Sleep(time.Second)
-	fmt.Println("1 second has passed", portNumber)
-	// call service and send my portnumber
+		time.Sleep(time.Second)
+		fmt.Println("1 second has passed", portNumber)
+		// call service and send my portnumber
 	}
 }
 func handleConnection(conn net.Conn) {
@@ -123,10 +124,11 @@ func listenForDownload(port string) {
 	}
 }
 
-type server struct{
+type server struct {
 	filetransfer.UnimplementedFileTransferServiceServer
 }
-func uploadFileToPort(filePath string , dataKeeperPort string) {
+
+func uploadFileToPort(filePath string, dataKeeperPort string) {
 	conn, err := net.Dial("tcp", dataKeeperPort)
 	if err != nil {
 		fmt.Println("Error connecting:", err.Error())
@@ -151,28 +153,28 @@ func uploadFileToPort(filePath string , dataKeeperPort string) {
 	fmt.Println("File sent successfully!")
 }
 func (s *server) TransferFile(ctx context.Context, req *filetransfer.FilePortRequest) (*filetransfer.SuccessResponse, error) {
-    log.Printf("Received file %s to transfer on port %s\n", req.Filename, req.PortNumber)
-    // Here you can implement your file transfer logic
-    // For demonstration purposes, let's just return a success response
-		/////////////////////////////////////////////////////////////////
-		// here must be replaced with the correct file path
-		filepath := req.Filename
-		//////////////////////////////
-		uploadFileToPort(filepath, req.PortNumber)
-		////////////////////////////////////////////////////////////////
-    return &filetransfer.SuccessResponse{Success: true}, nil
+	log.Printf("Received file %s to transfer on port %s\n", req.Filename, req.PortNumber)
+	// Here you can implement your file transfer logic
+	// For demonstration purposes, let's just return a success response
+	/////////////////////////////////////////////////////////////////
+	// here must be replaced with the correct file path
+	filepath := req.Filename
+	//////////////////////////////
+	uploadFileToPort(filepath, req.PortNumber)
+	////////////////////////////////////////////////////////////////
+	return &filetransfer.SuccessResponse{Success: true}, nil
 }
 func uploadFile(port string) {
 	// Connect to the server
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
-			log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	filetransfer.RegisterFileTransferServiceServer(s, &server{})
 	log.Println("Server started. Listening on port 8080...")
 	if err := s.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+		log.Fatalf("failed to serve: %v", err)
 	}
 }
 func main() {
@@ -191,6 +193,6 @@ func main() {
 	// upload to client
 	go uploadFile(portNumber2)
 
-
-	for {}
+	for {
+	}
 }

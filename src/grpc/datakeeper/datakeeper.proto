@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "wireless_lab_1/grpc/datakeeper";
+option go_package = "src/grpc/datakeeper";
 
 package datakeeper;
 

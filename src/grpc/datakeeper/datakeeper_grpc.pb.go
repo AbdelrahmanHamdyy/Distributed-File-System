@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v5.26.0
-// source: datakeeper.proto
+// source: src/grpc/datakeeper/datakeeper.proto
 
 package datakeeper
 
@@ -185,5 +185,5 @@ var DataKeeperService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "datakeeper.proto",
+	Metadata: "src/grpc/datakeeper/datakeeper.proto",
 }

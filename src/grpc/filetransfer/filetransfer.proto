@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package filetransfer;
 
-option go_package = "wireless_lab_1/grpc/filetransfer";
+option go_package = "src/grpc/filetransfer";
 
 message FilePortRequest {
     string filename = 1;

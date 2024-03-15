@@ -11,6 +11,8 @@ import (
 
 	"src/DataClient/DataClient/filetransfer" // Import the generated package
 
+	pb "src/grpc"
+
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 )
@@ -238,27 +240,27 @@ func main() {
 		return
 	}
 	defer conn.Close()
-	// c := pb.NewTextServiceClient(conn)
+	c := pb.NewMasterTrackerServiceClient(conn)
 
 	// Read input from user
 	userChoice := getUserChoice()
 
-	// resp := &pb.TextResponse{}
+	resp := &pb.UploadFileResponse{}
 	err = nil
 	if userChoice == "1" {
 		fmt.Println("You chose to upload a file.")
 		// Call your upload file function here
 		/////////////////////////////////////////////////////////////////////////////////
 		// fake rpc will be replaced with the actual rpc call will get the port number of the data keeper
-		// resp, err = c.Capitalize(context.Background(), &pb.TextRequest{Text: userChoice})
-		// if err != nil {
-		// 	fmt.Println("Error calling Capitalize:", err)
-		// 	return
-		// }
-		// dataKeeperPort := resp.GetCapitalizedText()
+		resp, err = c.UploadFile(context.Background(), &pb.UploadFileRequest{})
+		if err != nil {
+			fmt.Println("Error calling Capitalize:", err)
+			return
+		}
+		dataKeeperPort := resp.GetAddress()
 		///////////////////////////////////////////////////////////////////////////////////
 		//  data keeper port number
-		fmt.Println("Your data keeper port number :")
+		fmt.Println("Your data keeper port number : ", dataKeeperPort)
 
 		// Ask the user for the file path
 		fmt.Print("Enter the file path: ")
@@ -279,7 +281,7 @@ func main() {
 		if respK {
 			// Connect to the data keeper
 			fmt.Println("Uploading file...")
-			// uploadFile(filePath, dataKeeperPort)
+			uploadFile(filePath, dataKeeperPort)
 			//////////////////////////////////////
 		} else {
 			fmt.Println("Error connecting to the data keeper")
