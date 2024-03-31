@@ -13,7 +13,7 @@ import (
 
 	pb "src/grpc"
 
-	// dk "src/grpc/filetransfer"
+	dk "src/grpc/datakeeper"
 
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
@@ -99,7 +99,7 @@ func downloadFile(dataKeeperPort string) {
 		return
 	}
 	defer listener.Close()
-	fmt.Println("Server started. Listening on port 8080...")
+	fmt.Println("Server started. Listening on port", dataKeeperPort)
 
 	// Accept incoming connections
 	for {
@@ -170,7 +170,7 @@ func myServer() {
 	filetransfer.RegisterSuccessServiceServer(grpcServer, &successServer{})
 
 	// print
-	fmt.Println("Server started. Listening on port 8081...")
+	fmt.Println("Server started. Listening on port", grpcPortNumber)
 	// Start the gRPC server
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
@@ -252,6 +252,7 @@ func main() {
 
 		} else {
 			fmt.Println("You chose to download a file.")
+			go downloadFile(myPortNumber)
 			// Call your download file function here
 			// ask the user for the file name
 			fmt.Print("Enter the file name: ")
@@ -281,27 +282,26 @@ func main() {
 			// and fileName is the name of the file to be downloaded
 			// myPortNumber is the port number of the client
 
-			// conn, err = grpc.Dial(dataKeeperPort, grpc.WithInsecure())
-			// if err != nil {
-			// 	fmt.Println("did not connect:", err)
-			// 	return
-			// }
-			// defer conn.Close()
-			// d := dk.NewFileTransferServiceClient(conn)
-			// resp3, err3 := d.TransferFile(context.Background(), &dk.FilePortRequest{Filename: fileName, PortNumber: myPortNumber})
-			// if err3 != nil {
-			// 	fmt.Println("Error calling DownloadFile:", err3)
-			// 	return
-			// }
-			// successMsg := resp3.GetSuccess()
-			// if successMsg {
-			// 	fmt.Println("File downloaded successfully!")
-			// } else {
-			// 	fmt.Println("Error downloading file")
-			// }
+			conn, err = grpc.Dial(dataKeeperPort, grpc.WithInsecure())
+			if err != nil {
+				fmt.Println("did not connect:", err)
+				return
+			}
+			defer conn.Close()
+			d := dk.NewDataKeeperServiceClient(conn)
+			resp3, err3 := d.TransferFile(context.Background(), &dk.FilePortRequest{Filename: fileName, PortNumber: myPortNumber})
+			if err3 != nil {
+				fmt.Println("Error calling DownloadFile:", err3)
+				return
+			}
+			successMsg := resp3.GetSuccess()
+			if successMsg {
+				fmt.Println("File downloaded successfully!")
+			} else {
+				fmt.Println("Error downloading file")
+			}
 			////////////////////////////////////////
 			// here will listen to the port number of the data keeper
-			downloadFile(myPortNumber)
 		}
 	}
 }

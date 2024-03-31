@@ -23,6 +23,7 @@ type masterServer struct {
 type dataNode struct {
 	dataNodeId int32
 	address    string
+	downloadAddress string
 	isAlive    bool
 }
 type FileMetadata struct {
@@ -136,7 +137,7 @@ func (s *masterServer) DownloadFile(ctx context.Context, req *pb.DownloadFileReq
 	// }
 	for _, file := range fileLookupTable {
 		if file.FileName == fileName && dataNodeLookupTable[file.DataNodeId].isAlive {
-			addresses = append(addresses, dataNodeLookupTable[file.DataNodeId].address)
+			addresses = append(addresses, dataNodeLookupTable[file.DataNodeId].downloadAddress)
 		}
 	}
 	return &pb.DownloadFileResponse{Addresses: addresses}, nil
@@ -201,13 +202,13 @@ func Replication() {
 }
 
 func populateDataKeepers() {
-	dataNodeData := dataNode{dataNodeId: 0, address: "localhost:50051", isAlive: true}
+	dataNodeData := dataNode{dataNodeId: 0, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
 	dataNodeLookupTable[0] = dataNodeData
 
-	dataNodeData = dataNode{dataNodeId: 1, address: "localhost:50051", isAlive: true}
+	dataNodeData = dataNode{dataNodeId: 1, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
 	dataNodeLookupTable[1] = dataNodeData
 
-	dataNodeData = dataNode{dataNodeId: 2, address: "localhost:50051", isAlive: true}
+	dataNodeData = dataNode{dataNodeId: 2, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
 	dataNodeLookupTable[2] = dataNodeData
 }
 

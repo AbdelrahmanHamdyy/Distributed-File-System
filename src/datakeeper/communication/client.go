@@ -10,7 +10,6 @@ import (
 	"time"
 
 	pb "src/grpc/datakeeper"
-	"src/grpc/filetransfer"
 
 	ms "src/grpc"
 
@@ -41,40 +40,6 @@ func (c *DataKeeperClient) Close() {
 	c.conn.Close()
 }
 
-// StoreFile sends a request to store a file to the Data Keeper node.
-func (c *DataKeeperClient) StoreFile(ctx context.Context, metadata *pb.FileMetadata) error {
-	_, err := c.service.Store(ctx, metadata)
-	if err != nil {
-		log.Printf("Failed to store file: %v", err)
-		return err
-	}
-	log.Printf("File stored successfully: %s", metadata.Name)
-	return nil
-}
-
-// RetrieveFile sends a request to retrieve a file from the Data Keeper node.
-func (c *DataKeeperClient) RetrieveFile(ctx context.Context, filename string) (*pb.FileMetadata, error) {
-	// resp, err := c.service.Retrieve(ctx, &pb.FileMetadata{Value: filename})
-	// if err != nil {
-	// 	log.Printf("Failed to retrieve file: %v", err)
-	// 	return nil, err
-	// }
-	// log.Printf("File retrieved successfully: %s", filename)
-	// return resp, nil
-	return &pb.FileMetadata{}, nil
-}
-
-// SendKeepalivePing sends a keepalive ping to the Data Keeper node.
-func (c *DataKeeperClient) SendKeepalivePing(ctx context.Context, nodeID string) error {
-	_, err := c.service.SendPing(ctx, &pb.KeepalivePing{NodeID: nodeID})
-	if err != nil {
-		log.Printf("Failed to send keepalive ping: %v", err)
-		return err
-	}
-	log.Printf("Keepalive ping sent successfully to node: %s", nodeID)
-	return nil
-}
-
 // define a main function
 func waitAndPrint(portNumber string) {
 	for {
@@ -83,6 +48,7 @@ func waitAndPrint(portNumber string) {
 		// call service and send my portnumber
 	}
 }
+
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -140,7 +106,7 @@ func listenForDownload(port string) {
 		return
 	}
 	defer listener.Close()
-	fmt.Println("Server started. Listening on port 8080...")
+	fmt.Println("Server started. Listening on port", port)
 
 	// Accept incoming connections
 	for {
@@ -157,11 +123,11 @@ func listenForDownload(port string) {
 }
 
 type server struct {
-	filetransfer.UnimplementedFileTransferServiceServer
+	pb.UnimplementedDataKeeperServiceServer
 }
 
-func uploadFileToPort(filePath string, dataKeeperPort string) {
-	conn, err := net.Dial("tcp", dataKeeperPort)
+func uploadFileToPort(filePath string, clientPort string) {
+	conn, err := net.Dial("tcp", clientPort)
 	if err != nil {
 		fmt.Println("Error connecting:", err.Error())
 		return
@@ -184,7 +150,7 @@ func uploadFileToPort(filePath string, dataKeeperPort string) {
 	}
 	fmt.Println("File sent successfully!")
 }
-func (s *server) TransferFile(ctx context.Context, req *filetransfer.FilePortRequest) (*filetransfer.SuccessResponse, error) {
+func (s *server) TransferFile(ctx context.Context, req *pb.FilePortRequest) (*pb.SuccessResponse, error) {
 	log.Printf("Received file %s to transfer on port %s\n", req.Filename, req.PortNumber)
 	// Here you can implement your file transfer logic
 	// For demonstration purposes, let's just return a success response
@@ -194,7 +160,7 @@ func (s *server) TransferFile(ctx context.Context, req *filetransfer.FilePortReq
 	//////////////////////////////
 	uploadFileToPort(filepath, req.PortNumber)
 	////////////////////////////////////////////////////////////////
-	return &filetransfer.SuccessResponse{Success: true}, nil
+	return &pb.SuccessResponse{Success: true}, nil
 }
 func uploadFile(port string) {
 	// Connect to the server
@@ -203,8 +169,8 @@ func uploadFile(port string) {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	filetransfer.RegisterFileTransferServiceServer(s, &server{})
-	log.Println("Server started. Listening on port 8080...")
+	pb.RegisterDataKeeperServiceServer(s, &server{})
+	log.Println("Server started. Listening on port", port)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

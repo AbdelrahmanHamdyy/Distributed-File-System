@@ -1,31 +1,18 @@
 syntax = "proto3";
 
-option go_package = "src/grpc/datakeeper";
-
 package datakeeper;
 
-// Metadata for a file
-message FileMetadata {
-  string name = 1;
-  bytes data = 2;
+option go_package = "src/grpc/datakeeper";
+
+message FilePortRequest {
+    string filename = 1;
+    string port_number = 2;
 }
 
-// A keepalive ping
-message KeepalivePing {
-  string nodeID = 1;
+message SuccessResponse {
+    bool success = 1;
 }
 
-// Empty message
-message Empty {}
-
-// The service that the Data Keeper provides
 service DataKeeperService {
-  // Store a file
-  rpc Store(FileMetadata) returns (Empty) {}
-
-  // Retrieve a file
-  rpc Retrieve(FileMetadata) returns (FileMetadata) {}
-
-  // Send a keepalive ping
-  rpc SendPing(KeepalivePing) returns (Empty) {}
+    rpc TransferFile(FilePortRequest) returns (SuccessResponse);
 }
