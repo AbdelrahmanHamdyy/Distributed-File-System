@@ -13,9 +13,13 @@ import (
 
 	pb "src/grpc"
 
+	// dk "src/grpc/filetransfer"
+
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 )
+
+var grpcPortNumber = ":3000"
 
 func getUserChoice() string {
 	var text string
@@ -111,49 +115,6 @@ func downloadFile(dataKeeperPort string) {
 	}
 }
 
-// filetransfer service
-
-func test() {
-	conn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
-
-	// Create a client for the PortNumberService
-	portClient := filetransfer.NewPortNumberServiceClient(conn)
-
-	// Send a port number to the server
-	port := "8080" // Example port number
-	portResponse, err := portClient.SendPortNumber(context.Background(), &filetransfer.PortNumberRequest{PortNumber: port})
-	if err != nil {
-		log.Fatalf("could not send port number: %v", err)
-	}
-
-	// Print the response from the server
-	if portResponse.Success {
-		fmt.Println("Port number sent successfully")
-	} else {
-		fmt.Println("Failed to send port number")
-	}
-
-	// Create a client for the SuccessService
-	successClient := filetransfer.NewSuccessServiceClient(conn)
-
-	// Report success to the server
-	successResponse, err := successClient.ReportSuccess(context.Background(), &filetransfer.SuccessRequest{Success: true})
-	if err != nil {
-		log.Fatalf("could not report success: %v", err)
-	}
-
-	// Print the response from the server
-	if successResponse.Success {
-		fmt.Println("Success reported to the server")
-	} else {
-		fmt.Println("Failed to report success to the server")
-	}
-}
-
 ////////////////////////PROTO//////////////////////////////////
 // Define a struct to implement the PortNumberService server
 var portNum string = ""
@@ -194,7 +155,7 @@ func (s *successServer) ReportSuccess(ctx context.Context, request *filetransfer
 
 func myServer() {
 	// Create a TCP listener on port 8080
-	lis, err := net.Listen("tcp", ":8081")
+	lis, err := net.Listen("tcp", grpcPortNumber)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -220,7 +181,6 @@ func myServer() {
 func main() {
 
 	///////////////////
-	// test()
 	go myServer()
 	//////////////////
 	// Load the environment variables from the .env file
@@ -241,82 +201,107 @@ func main() {
 	}
 	defer conn.Close()
 	c := pb.NewMasterTrackerServiceClient(conn)
+	
+	for {
+		// Read input from user
+		userChoice := getUserChoice()
 
-	// Read input from user
-	userChoice := getUserChoice()
+		resp := &pb.UploadFileResponse{}
+		err = nil
+		if userChoice == "1" {
+			fmt.Println("You chose to upload a file.")
+			// Call your upload file function here
+			/////////////////////////////////////////////////////////////////////////////////
+			// fake rpc will be replaced with the actual rpc call will get the port number of the data keeper
+			resp, err = c.UploadFile(context.Background(), &pb.UploadFileRequest{
+				ClientPort: "localhost" + grpcPortNumber,
+			})
+			if err != nil {
+				fmt.Println("Error calling Capitalize:", err)
+				return
+			}
+			dataKeeperPort := resp.GetAddress()
+			///////////////////////////////////////////////////////////////////////////////////
+			//  data keeper port number
+			fmt.Println("Your data keeper port number : ", dataKeeperPort)
 
-	resp := &pb.UploadFileResponse{}
-	err = nil
-	if userChoice == "1" {
-		fmt.Println("You chose to upload a file.")
-		// Call your upload file function here
-		/////////////////////////////////////////////////////////////////////////////////
-		// fake rpc will be replaced with the actual rpc call will get the port number of the data keeper
-		resp, err = c.UploadFile(context.Background(), &pb.UploadFileRequest{})
-		if err != nil {
-			fmt.Println("Error calling Capitalize:", err)
-			return
-		}
-		dataKeeperPort := resp.GetAddress()
-		///////////////////////////////////////////////////////////////////////////////////
-		//  data keeper port number
-		fmt.Println("Your data keeper port number : ", dataKeeperPort)
+			// Ask the user for the file path
+			fmt.Print("Enter the file path: ")
+			var filePath string
+			fmt.Scanln(&filePath)
+			_, err := os.Stat(filePath)
+			if os.IsNotExist(err) {
+				fmt.Println("File does not exist.")
+				return
+			}
+			// print the file path
+			fmt.Println("Your File path:", filePath)
+			////////////////////////////////////////////////////////
+			// request data keeper for uploading the file
+			fmt.Println("Connecting to the data keeper...")
+			respK := true
+			////////////////////////////////////////////////////////
+			if respK {
+				// Connect to the data keeper
+				fmt.Println("Uploading file...")
+				uploadFile(filePath, dataKeeperPort)
+				//////////////////////////////////////
+			} else {
+				fmt.Println("Error connecting to the data keeper")
+			}
 
-		// Ask the user for the file path
-		fmt.Print("Enter the file path: ")
-		var filePath string
-		fmt.Scanln(&filePath)
-		_, err := os.Stat(filePath)
-		if os.IsNotExist(err) {
-			fmt.Println("File does not exist.")
-			return
-		}
-		// print the file path
-		fmt.Println("Your File path:", filePath)
-		////////////////////////////////////////////////////////
-		// request data keeper for uploading the file
-		fmt.Println("Connecting to the data keeper...")
-		respK := true
-		////////////////////////////////////////////////////////
-		if respK {
-			// Connect to the data keeper
-			fmt.Println("Uploading file...")
-			uploadFile(filePath, dataKeeperPort)
-			//////////////////////////////////////
 		} else {
-			fmt.Println("Error connecting to the data keeper")
+			fmt.Println("You chose to download a file.")
+			// Call your download file function here
+			// ask the user for the file name
+			fmt.Print("Enter the file name: ")
+			var fileName string
+			fmt.Scanln(&fileName)
+			// print the file name
+			fmt.Println("Your File name:", fileName)
+			// fake rpc will be replaced with the actual rpc call will get the port number of the data keeper
+			resp2 := &pb.DownloadFileResponse{}
+			err = nil
+			resp2, err = c.DownloadFile(context.Background(), &pb.DownloadFileRequest{FileName: fileName})
+			if err != nil {
+				fmt.Println("Error calling DownloadFile:", err)
+				return
+			}
+			ports := resp2.GetAddresses()
+			dataKeeperPort := ports[0]
+			//  data keeper port number
+			fmt.Println("Data keeper port:", dataKeeperPort)
+			// Connect to the data keeper
+			fmt.Println("Connecting to the data keeper...")
+			// download file from the data keeper
+			//////////////////////////////////////
+			//
+			// here will request the data keeper to download the file
+			// where dataKeeperPort is the port number of the data keeper
+			// and fileName is the name of the file to be downloaded
+			// myPortNumber is the port number of the client
+
+			// conn, err = grpc.Dial(dataKeeperPort, grpc.WithInsecure())
+			// if err != nil {
+			// 	fmt.Println("did not connect:", err)
+			// 	return
+			// }
+			// defer conn.Close()
+			// d := dk.NewFileTransferServiceClient(conn)
+			// resp3, err3 := d.TransferFile(context.Background(), &dk.FilePortRequest{Filename: fileName, PortNumber: myPortNumber})
+			// if err3 != nil {
+			// 	fmt.Println("Error calling DownloadFile:", err3)
+			// 	return
+			// }
+			// successMsg := resp3.GetSuccess()
+			// if successMsg {
+			// 	fmt.Println("File downloaded successfully!")
+			// } else {
+			// 	fmt.Println("Error downloading file")
+			// }
+			////////////////////////////////////////
+			// here will listen to the port number of the data keeper
+			downloadFile(myPortNumber)
 		}
-
-	} else {
-		fmt.Println("You chose to download a file.")
-		// Call your download file function here
-		// ask the user for the file name
-		fmt.Print("Enter the file name: ")
-		var fileName string
-		fmt.Scanln(&fileName)
-		// print the file name
-		fmt.Println("Your File name:", fileName)
-		// fake rpc will be replaced with the actual rpc call will get the port number of the data keeper
-		// resp, err = c.Capitalize(context.Background(), &pb.TextRequest{Text: userChoice})
-		// if err != nil {
-		// 	fmt.Println("Error calling Capitalize:", err)
-		// 	return
-		// }
-		// dataKeeperPort := resp.GetCapitalizedText()
-		//  data keeper port number
-		fmt.Println("Your data keeper port number :")
-		// Connect to the data keeper
-		fmt.Println("Connecting to the data keeper...")
-		// download file from the data keeper
-		//////////////////////////////////////
-		//
-		//  here will request the data keeper to download the file
-		// where dataKeeperPort is the port number of the data keeper
-		// and fileName is the name of the file to be downloaded
-		// myPortNumber is the port number of the client
-		////////////////////////////////////////
-		// here will listen to the port number of the data keeper
-		downloadFile(myPortNumber)
 	}
-
 }

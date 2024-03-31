@@ -9,10 +9,13 @@ import (
 
 	pb "src/grpc" // Import the generated package
 
+	cl "src/DataClient/DataClient/filetransfer"
+
 	"google.golang.org/grpc"
 )
 
 const numDataNodes = 3
+var clientPort string
 
 type masterServer struct {
 	pb.UnimplementedMasterTrackerServiceServer
@@ -45,24 +48,25 @@ func (s *masterServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest
 		dataNodeId = rand.Intn(numDataNodes)
 	}
 	nodeAddr := dataNodeLookupTable[0].address
+	clientPort = req.GetClientPort()
 	return &pb.UploadFileResponse{Address: nodeAddr}, nil
 }
 
 func notifyClient(fileName string) {
-	// fmt.Printf("Notifying client about file %s\n", fileName)
-	// conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
-	// if err != nil {
-	// 	fmt.Println("Did not connect:", err)
-	// 	return
-	// }
-	// defer conn.Close()
-	// c := pb.NewDataServiceClient(conn)
-	// resp, err := c.SuccessfulRegistration(context.Background(), &pb.SuccessfulRequest{FileName: fileName})
-	// if err != nil {
-	// 	fmt.Println("Error notifying the client:", err)
-	// 	return
-	// }
-	// fmt.Println("Client Status:", resp.GetStatus())
+	fmt.Printf("Notifying client about file %s\n", fileName)
+	conn, err := grpc.Dial(clientPort, grpc.WithInsecure())
+	if err != nil {
+		fmt.Println("Did not connect:", err)
+		return
+	}
+	defer conn.Close()
+	c := cl.NewSuccessServiceClient(conn)
+	resp, err := c.ReportSuccess(context.Background(), &cl.SuccessRequest{Success: true})
+	if err != nil {
+		fmt.Println("Error notifying the client:", err)
+		return
+	}
+	fmt.Println("Client Status:", resp.GetSuccess())
 }
 
 func chooseTwoRandomNodes(dataNodeId int32) []int32 {
@@ -93,38 +97,43 @@ func chooseNodesToReplicate(fileName string, dataNodeId int32) {
 	// 	return
 	// }
 	// defer conn.Close()
-	// c := pb.NewDataNodeServiceKeeper(conn)
+	// c := dk.NewFileTransferServiceClient(conn)
 	// address := dataNodeLookupTable[nodeIds[0]].address
-	// resp, err := c.ReplicateFile(context.Background(), &pb.ReplicationRequest{FileName: fileName, Address: address})
+	// resp, err := c.ReplicateFile(context.Background(), &dk.ReplicationRequest{FileName: fileName, Address: address})
 	// if err != nil {
-	// 	fmt.Println("Error notifying the client:", err)
+	// 	fmt.Println("Error sending to datakeeper:", err)
 	// 	return
 	// }
 	// fmt.Println("First Data Node response:", resp.GetDataNodeMessage())
 
 	// address = dataNodeLookupTable[nodeIds[1]].address
-	// resp, err = c.ReplicateFile(context.Background(), &pb.ReplicationRequest{FileName: fileName, Address: address})
+	// resp, err = c.ReplicateFile(context.Background(), &dk.ReplicationRequest{FileName: fileName, Address: address})
 	// if err != nil {
-	// 	fmt.Println("Error notifying the client:", err)
+	// 	fmt.Println("Error sending to datakeeper:", err)
 	// 	return
 	// }
 	// fmt.Println("Second Data Node response:", resp.GetDataNodeMessage())
 }
 
 func (s *masterServer) RegisterFile(ctx context.Context, req *pb.RegisterFileRequest) (*pb.RegisterFileResponse, error) {
+	fmt.Printf("Register File called\n")
 	fileName := req.GetFileName()
 	dataNodeId := req.GetDataNodeId()
 	filePath := req.GetFilePath()
 	fileMetadata := FileMetadata{FileName: fileName, DataNodeId: dataNodeId, FilePath: filePath}
 	fileLookupTable = append(fileLookupTable, fileMetadata)
-	notifyClient(fileName)                       // TODO: Integrate with client
+	notifyClient(fileName)
 	chooseNodesToReplicate(fileName, dataNodeId) // TODO: Integrate with Data Keeper
 	return &pb.RegisterFileResponse{}, nil
 }
 
 func (s *masterServer) DownloadFile(ctx context.Context, req *pb.DownloadFileRequest) (*pb.DownloadFileResponse, error) {
+	fmt.Printf("Download File called\n")
 	fileName := req.GetFileName()
 	addresses := make([]string, 0)
+	// for _, data := range dataNodeLookupTable {
+	// 	fmt.Printf("Data Node %d is alive: %t\n", data.dataNodeId, data.isAlive)
+	// }
 	for _, file := range fileLookupTable {
 		if file.FileName == fileName && dataNodeLookupTable[file.DataNodeId].isAlive {
 			addresses = append(addresses, dataNodeLookupTable[file.DataNodeId].address)
@@ -192,13 +201,13 @@ func Replication() {
 }
 
 func populateDataKeepers() {
-	dataNodeData := dataNode{dataNodeId: 0, address: "dataNodeId1", isAlive: true}
+	dataNodeData := dataNode{dataNodeId: 0, address: "localhost:50051", isAlive: true}
 	dataNodeLookupTable[0] = dataNodeData
 
-	dataNodeData = dataNode{dataNodeId: 1, address: "dataNodeId2", isAlive: true}
+	dataNodeData = dataNode{dataNodeId: 1, address: "localhost:50051", isAlive: true}
 	dataNodeLookupTable[1] = dataNodeData
 
-	dataNodeData = dataNode{dataNodeId: 2, address: "dataNodeId3", isAlive: true}
+	dataNodeData = dataNode{dataNodeId: 2, address: "localhost:50051", isAlive: true}
 	dataNodeLookupTable[2] = dataNodeData
 }
 

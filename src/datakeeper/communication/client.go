@@ -12,8 +12,13 @@ import (
 	pb "src/grpc/datakeeper"
 	"src/grpc/filetransfer"
 
+	ms "src/grpc"
+
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 )
+
+var fileName = "received.mp4"
 
 // DataKeeperClient represents a gRPC client for communicating with the Data Keeper node.
 type DataKeeperClient struct {
@@ -74,7 +79,7 @@ func (c *DataKeeperClient) SendKeepalivePing(ctx context.Context, nodeID string)
 func waitAndPrint(portNumber string) {
 	for {
 		time.Sleep(time.Second)
-		fmt.Println("1 second has passed", portNumber)
+		// fmt.Println("1 second has passed", portNumber)
 		// call service and send my portnumber
 	}
 }
@@ -82,7 +87,7 @@ func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	// Create a new file to save the received .mp4 file
-	file, err := os.Create("received.mp4")
+	file, err := os.Create(fileName)
 	if err != nil {
 		fmt.Println("Error creating file:", err.Error())
 		return
@@ -97,6 +102,33 @@ func handleConnection(conn net.Conn) {
 	}
 
 	fmt.Println("File received and saved: received.mp4")
+
+	err = godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Connecting with master
+	masterPort := os.Getenv("MASTER_PORT")
+	fmt.Printf("Master port: %s\n", masterPort)
+	conn2, err2 := grpc.Dial(masterPort, grpc.WithInsecure())
+	if err2 != nil {
+		fmt.Println("did not connect:", err2)
+		return
+	}
+	defer conn2.Close()
+	c := ms.NewMasterTrackerServiceClient(conn2)
+
+	// Calling RegisterFile service
+	_, err = c.RegisterFile(context.Background(), &ms.RegisterFileRequest{
+		FileName: fileName,
+		DataNodeId: 0,
+		FilePath: fileName,
+	})
+	if err != nil {
+		fmt.Println("Error calling Capitalize:", err)
+		return
+	}
 }
 
 // function listen on a port for downloading

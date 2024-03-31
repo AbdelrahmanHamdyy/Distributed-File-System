@@ -27,7 +27,9 @@ message HeartbeatResponse {
     bool success = 1;
 }
 
-message UploadFileRequest {}
+message UploadFileRequest {
+    string clientPort = 1;
+}
 
 message UploadFileResponse {
     string address = 1;
