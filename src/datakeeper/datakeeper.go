@@ -12,7 +12,7 @@ import (
 
 	pb "src/grpc/datakeeper"
 
-	ms "src/grpc"
+	ms "src/grpc/master"
 
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"

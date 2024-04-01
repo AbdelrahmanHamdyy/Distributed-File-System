@@ -7,9 +7,9 @@ import (
 	"net"
 	"time"
 
-	pb "src/grpc" // Import the generated package
+	pb "src/grpc/master" // Import the generated package
 
-	cl "src/DataClient/filetransfer"
+	cl "src/grpc/filetransfer"
 
 	"google.golang.org/grpc"
 )

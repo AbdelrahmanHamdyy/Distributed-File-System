@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package filetransfer;
 
-option go_package = "src/DataClient/DataClient/filetransfer";
+option go_package = "src/grpc/filetransfer";
 
 message PortNumberRequest {
     string port_number = 1;

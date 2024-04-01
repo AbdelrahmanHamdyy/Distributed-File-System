@@ -9,9 +9,9 @@ import (
 	"os"
 	"strings"
 
-	"src/DataClient/filetransfer" // Import the generated package
+	"src/grpc/filetransfer" // Import the generated package
 
-	pb "src/grpc"
+	pb "src/grpc/master"
 
 	dk "src/grpc/datakeeper"
 

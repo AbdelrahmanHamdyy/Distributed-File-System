@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "src/grpc";
-
 package master;
+
+option go_package = "src/grpc/master";
 
 // Define service for Master Tracker
 service MasterTrackerService {
