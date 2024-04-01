@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const numDataNodes = 3
+const numDataNodes = 1
 var clientPort string
 
 type masterServer struct {
@@ -38,7 +38,7 @@ var dataNodeLookupTable = make([]dataNode, numDataNodes)
 
 func (s *masterServer) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.HeartbeatResponse, error) {
 	id := req.GetDataNodeId()
-	fmt.Printf("Received heartbeat from Data Keeper node %d\n", id)
+	// fmt.Printf("Received heartbeat from Data Keeper node %d\n", id)
 	dataNodesHeartbeats[id] += 1
 	return &pb.HeartbeatResponse{}, nil
 }
@@ -205,11 +205,11 @@ func populateDataKeepers() {
 	dataNodeData := dataNode{dataNodeId: 0, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
 	dataNodeLookupTable[0] = dataNodeData
 
-	dataNodeData = dataNode{dataNodeId: 1, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
-	dataNodeLookupTable[1] = dataNodeData
+	// dataNodeData = dataNode{dataNodeId: 1, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
+	// dataNodeLookupTable[1] = dataNodeData
 
-	dataNodeData = dataNode{dataNodeId: 2, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
-	dataNodeLookupTable[2] = dataNodeData
+	// dataNodeData = dataNode{dataNodeId: 2, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
+	// dataNodeLookupTable[2] = dataNodeData
 }
 
 func main() {
@@ -224,11 +224,11 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterMasterTrackerServiceServer(s, &masterServer{})
 	fmt.Println("Server started. Listening on port 8080...")
+	
+	go checkAliveDataNodes()
+	go Replication()
 
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("Failed to serve:", err)
 	}
-
-	go checkAliveDataNodes()
-	go Replication()
 }

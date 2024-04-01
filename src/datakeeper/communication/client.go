@@ -46,6 +46,25 @@ func waitAndPrint(portNumber string) {
 		time.Sleep(time.Second)
 		// fmt.Println("1 second has passed", portNumber)
 		// call service and send my portnumber
+		err2 := godotenv.Load()
+		if err2 != nil {
+			log.Fatal("Error loading .env file")
+		}
+		masterPort := os.Getenv("MASTER_PORT")
+		conn, err := grpc.Dial(masterPort, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("did not connect:", err)
+			return
+		}
+		defer conn.Close()
+		c := ms.NewMasterTrackerServiceClient(conn)
+
+		// Calling RegisterFile service
+		_, err = c.Heartbeat(context.Background(), &ms.HeartbeatRequest{DataNodeId: 0})
+		if err != nil {
+			fmt.Println("Error calling Heartbeat:", err)
+			return
+		}
 	}
 }
 
@@ -106,7 +125,7 @@ func listenForDownload(port string) {
 		return
 	}
 	defer listener.Close()
-	fmt.Println("Server started. Listening on port", port)
+	fmt.Println("[UPLOAD] Server started. Listening on port", port)
 
 	// Accept incoming connections
 	for {
@@ -170,7 +189,7 @@ func uploadFile(port string) {
 	}
 	s := grpc.NewServer()
 	pb.RegisterDataKeeperServiceServer(s, &server{})
-	log.Println("Server started. Listening on port", port)
+	log.Println("[DOWNLOAD] Server started. Listening on port", port)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
