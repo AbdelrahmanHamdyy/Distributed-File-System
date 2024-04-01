@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var fileName = "received.mp4"
+var fileName = "received"
 
 // DataKeeperClient represents a gRPC client for communicating with the Data Keeper node.
 type DataKeeperClient struct {
@@ -112,7 +112,7 @@ func handleConnection(conn net.Conn) {
 	_, err = c.RegisterFile(context.Background(), &ms.RegisterFileRequest{
 		FileName: fileName,
 		DataNodeId: 0,
-		FilePath: fileName,
+		FilePath: fileName + ".mp4",
 	})
 	if err != nil {
 		fmt.Println("Error calling Capitalize:", err)
