@@ -16,3 +16,11 @@ message SuccessResponse {
 service DataKeeperService {
     rpc TransferFile(FilePortRequest) returns (SuccessResponse);
 }
+
+message fileSaveRequest {
+    string filename = 1;
+}
+
+service FileSaveService {
+    rpc SaveFile(fileSaveRequest) returns (SuccessResponse);
+}

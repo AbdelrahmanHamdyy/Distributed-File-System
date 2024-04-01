@@ -32,7 +32,8 @@ message UploadFileRequest {
 }
 
 message UploadFileResponse {
-    string address = 1;
+    string UploadAddress = 1;
+    string grpcAddress = 2;
 }
 
 message RegisterFileRequest {

@@ -34,6 +34,9 @@ func NewDataKeeperClient(address string) (*DataKeeperClient, error) {
 	client := pb.NewDataKeeperServiceClient(conn)
 	return &DataKeeperClient{conn, client}, nil
 }
+ 
+// Implement the FileSaveService gRPC
+
 
 // Close closes the gRPC client connection.
 func (c *DataKeeperClient) Close() {
@@ -72,7 +75,7 @@ func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	// Create a new file to save the received .mp4 file
-	file, err := os.Create(fileName)
+	file, err := os.Create(fileName + ".mp4")
 	if err != nil {
 		fmt.Println("Error creating file:", err.Error())
 		return
@@ -86,7 +89,7 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	fmt.Println("File received and saved: received.mp4")
+	fmt.Println("File received and saved: " , fileName + ".mp4")
 
 	err = godotenv.Load()
 	if err != nil {
@@ -181,6 +184,18 @@ func (s *server) TransferFile(ctx context.Context, req *pb.FilePortRequest) (*pb
 	////////////////////////////////////////////////////////////////
 	return &pb.SuccessResponse{Success: true}, nil
 }
+
+type fileSaveNameServer struct {
+	pb.UnimplementedFileSaveServiceServer
+}
+
+func (s *fileSaveNameServer) SaveFile(ctx context.Context, req *pb.FileSaveRequest) (*pb.SuccessResponse, error) {
+	log.Printf("Received file %s to save\n", req.Filename)
+	fileName = req.Filename
+	////////////////////////////////////////////////////////////////
+	return &pb.SuccessResponse{Success: true}, nil
+}
+
 func uploadFile(port string) {
 	// Connect to the server
 	lis, err := net.Listen("tcp", port)
@@ -189,6 +204,8 @@ func uploadFile(port string) {
 	}
 	s := grpc.NewServer()
 	pb.RegisterDataKeeperServiceServer(s, &server{})
+	pb.RegisterFileSaveServiceServer(s, &fileSaveNameServer{})
+	
 	log.Println("[DOWNLOAD] Server started. Listening on port", port)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

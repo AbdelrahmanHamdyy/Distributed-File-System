@@ -49,8 +49,9 @@ func (s *masterServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest
 		dataNodeId = rand.Intn(numDataNodes)
 	}
 	nodeAddr := dataNodeLookupTable[0].address
+	grpcAddr := dataNodeLookupTable[0].downloadAddress
 	clientPort = req.GetClientPort()
-	return &pb.UploadFileResponse{Address: nodeAddr}, nil
+	return &pb.UploadFileResponse{UploadAddress: nodeAddr , GrpcAddress: grpcAddr }, nil
 }
 
 func notifyClient(fileName string) {

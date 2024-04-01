@@ -66,6 +66,8 @@ func uploadFile(filePath string, dataKeeperPort string) {
 		return
 	}
 	fmt.Println("File sent successfully!")
+	//// here use grpc to send the file name
+
 }
 
 // function handle connection
@@ -220,7 +222,8 @@ func main() {
 				fmt.Println("Error calling Capitalize:", err)
 				return
 			}
-			dataKeeperPort := resp.GetAddress()
+			dataKeeperPort := resp.GetUploadAddress()
+			dataKeeperPortGrpc := resp.GetGrpcAddress()
 			///////////////////////////////////////////////////////////////////////////////////
 			//  data keeper port number
 			fmt.Println("Your data keeper port number : ", dataKeeperPort)
@@ -229,7 +232,14 @@ func main() {
 			fmt.Print("Enter the file path: ")
 			var filePath string
 			fmt.Scanln(&filePath)
+
+			// Ask the user for the saving filename
+			fmt.Print("Enter the saving filename: ")
+			var fileName string
+			fmt.Scanln(&fileName)
+
 			_, err := os.Stat(filePath)
+			
 			if os.IsNotExist(err) {
 				fmt.Println("File does not exist.")
 				return
@@ -244,6 +254,26 @@ func main() {
 			if respK {
 				// Connect to the data keeper
 				fmt.Println("Uploading file...")
+				// get the file name
+				conn1,err1 := grpc.Dial(dataKeeperPortGrpc, grpc.WithInsecure())
+				if err1 != nil {
+					fmt.Println("did not connect:", err1)
+					return
+				}
+				defer conn1.Close()
+				d := dk.NewFileSaveServiceClient(conn1)
+				// for sending filename
+				resp1, err1 := d.SaveFile(context.Background(), &dk.FileSaveRequest{Filename: fileName})
+				if err1 != nil {
+					fmt.Println("Error calling SaveFile:", err1)
+					return
+				}
+				successMsg := resp1.GetSuccess()
+				if successMsg {
+					fmt.Println("File name send successfully!")
+				} else {
+					fmt.Println("Error sending file name ")
+				}
 				uploadFile(filePath, dataKeeperPort)
 				//////////////////////////////////////
 			} else {
