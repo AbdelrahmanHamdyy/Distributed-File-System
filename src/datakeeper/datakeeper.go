@@ -35,25 +35,21 @@ func NewDataKeeperClient(address string) (*DataKeeperClient, error) {
 	client := pb.NewDataKeeperServiceClient(conn)
 	return &DataKeeperClient{conn, client}, nil
 }
- 
-// Implement the FileSaveService gRPC
-
 
 // Close closes the gRPC client connection.
 func (c *DataKeeperClient) Close() {
 	c.conn.Close()
 }
 
-// define a main function
 func waitAndPrint(id int) {
 	for {
 		time.Sleep(time.Second)
-		// fmt.Println("1 second has passed", portNumber)
-		// call service and send my portnumber
 		err2 := godotenv.Load()
 		if err2 != nil {
 			log.Fatal("Error loading .env file")
 		}
+
+		// Connecting with master
 		masterPort := os.Getenv("MASTER_PORT")
 		conn, err := grpc.Dial(masterPort, grpc.WithInsecure())
 		if err != nil {
@@ -63,7 +59,7 @@ func waitAndPrint(id int) {
 		defer conn.Close()
 		c := ms.NewMasterTrackerServiceClient(conn)
 
-		// Calling RegisterFile service
+		// Calling Heartbeat service
 		_, err = c.Heartbeat(context.Background(), &ms.HeartbeatRequest{DataNodeId: int32(id)})
 		if err != nil {
 			fmt.Println("Error calling Heartbeat:", err)
@@ -120,7 +116,6 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
-// function listen on a port for downloading
 func listenForDownload(port string) {
 	// Listen on the given port
 	listener, err := net.Listen("tcp", port)
@@ -158,7 +153,7 @@ func uploadFileToPort(filePath string, clientPort string) {
 	defer conn.Close()
 
 	// Open the .mp4 file to be sent
-	file, err := os.Open(filePath) // Change "example.mp4" to the path of the .mp4 file you want to send
+	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Println("Error opening file:", err.Error())
 		return
@@ -173,16 +168,11 @@ func uploadFileToPort(filePath string, clientPort string) {
 	}
 	fmt.Println("File sent successfully!")
 }
+
 func (s *server) TransferFile(ctx context.Context, req *pb.FilePortRequest) (*pb.SuccessResponse, error) {
 	log.Printf("Received file %s to transfer on port %s\n", req.Filename, req.PortNumber)
-	// Here you can implement your file transfer logic
-	// For demonstration purposes, let's just return a success response
-	/////////////////////////////////////////////////////////////////
-	// here must be replaced with the correct file path
 	filepath := req.Filename + ".mp4"
-	//////////////////////////////
 	uploadFileToPort(filepath, req.PortNumber)
-	////////////////////////////////////////////////////////////////
 	return &pb.SuccessResponse{Success: true}, nil
 }
 
@@ -193,12 +183,10 @@ type fileSaveNameServer struct {
 func (s *fileSaveNameServer) SaveFile(ctx context.Context, req *pb.FileSaveRequest) (*pb.SuccessResponse, error) {
 	log.Printf("Received file %s to save\n", req.Filename)
 	fileName = req.Filename
-	////////////////////////////////////////////////////////////////
 	return &pb.SuccessResponse{Success: true}, nil
 }
 
 func uploadFile(port string) {
-	// Connect to the server
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -212,11 +200,12 @@ func uploadFile(port string) {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
+
 func main() {
 	fmt.Println("Hello, playground")
 	if len(os.Args) != 4 {
-			fmt.Println("Usage: program_name id arg1 arg2")
-			return
+		fmt.Println("Usage: program_name id arg1 arg2")
+		return
 	}
 
 	id := os.Args[1]
@@ -232,11 +221,13 @@ func main() {
 		fmt.Println("Invalid id:", err)
 		return
 	}
+	
+	// Heartbeat
 	go waitAndPrint(idInt)
-	//////////////////////////////////////////
+
 	// download from a client
 	go listenForDownload(portNumber1)
-	//////////////////////////////////////////
+
 	// upload to client
 	go uploadFile(portNumber2)
 

@@ -20,6 +20,7 @@ var clientPort string
 type masterServer struct {
 	pb.UnimplementedMasterTrackerServiceServer
 }
+
 type dataNode struct {
 	dataNodeId int32
 	address    string
@@ -38,7 +39,6 @@ var dataNodeLookupTable = make([]dataNode, numDataNodes)
 
 func (s *masterServer) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.HeartbeatResponse, error) {
 	id := req.GetDataNodeId()
-	// fmt.Printf("Received heartbeat from Data Keeper node %d\n", id)
 	dataNodesHeartbeats[id] += 1
 	return &pb.HeartbeatResponse{}, nil
 }
@@ -55,7 +55,6 @@ func (s *masterServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest
 }
 
 func notifyClient(fileName string) {
-	fmt.Printf("Notifying client about file %s\n", fileName)
 	conn, err := grpc.Dial(clientPort, grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("Did not connect:", err)
@@ -118,7 +117,6 @@ func chooseNodesToReplicate(fileName string, dataNodeId int32) {
 }
 
 func (s *masterServer) RegisterFile(ctx context.Context, req *pb.RegisterFileRequest) (*pb.RegisterFileResponse, error) {
-	fmt.Printf("Register File called\n")
 	fileName := req.GetFileName()
 	dataNodeId := req.GetDataNodeId()
 	filePath := req.GetFilePath()
@@ -130,12 +128,8 @@ func (s *masterServer) RegisterFile(ctx context.Context, req *pb.RegisterFileReq
 }
 
 func (s *masterServer) DownloadFile(ctx context.Context, req *pb.DownloadFileRequest) (*pb.DownloadFileResponse, error) {
-	fmt.Printf("Download File called\n")
 	fileName := req.GetFileName()
 	addresses := make([]string, 0)
-	// for _, data := range dataNodeLookupTable {
-	// 	fmt.Printf("Data Node %d is alive: %t\n", data.dataNodeId, data.isAlive)
-	// }
 	for _, file := range fileLookupTable {
 		if file.FileName == fileName && dataNodeLookupTable[file.DataNodeId].isAlive {
 			addresses = append(addresses, dataNodeLookupTable[file.DataNodeId].downloadAddress)
