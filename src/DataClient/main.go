@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"src/DataClient/DataClient/filetransfer" // Import the generated package
+	"src/DataClient/filetransfer" // Import the generated package
 
 	pb "src/grpc"
 
@@ -66,16 +66,14 @@ func uploadFile(filePath string, dataKeeperPort string) {
 		return
 	}
 	fmt.Println("File sent successfully!")
-	//// here use grpc to send the file name
-
 }
 
 // function handle connection
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, fileName string) {
 	defer conn.Close()
 
 	// Create a new file to save the received .mp4 file
-	file, err := os.Create("received.mp4")
+	file, err := os.Create(fileName + ".mp4")
 	if err != nil {
 		fmt.Println("Error creating file:", err.Error())
 		return
@@ -89,11 +87,11 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	fmt.Println("File received and saved: received.mp4")
+	fmt.Println("File received and saved:", fileName + ".mp4")
 }
 
 // function download file from server
-func downloadFile(dataKeeperPort string) {
+func downloadFile(dataKeeperPort string, fileName string) {
 	// Listen for incoming connections on port 8080
 	listener, err := net.Listen("tcp", dataKeeperPort)
 	if err != nil {
@@ -104,17 +102,15 @@ func downloadFile(dataKeeperPort string) {
 	fmt.Println("Server started. Listening on port", dataKeeperPort)
 
 	// Accept incoming connections
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Println("Error accepting connection:", err.Error())
-			return
-		}
-		fmt.Println("Client connected:", conn.RemoteAddr())
-
-		// Handle incoming connection in a separate goroutine
-		go handleConnection(conn)
+	conn, err := listener.Accept()
+	if err != nil {
+		fmt.Println("Error accepting connection:", err.Error())
+		return
 	}
+	fmt.Println("Client connected:", conn.RemoteAddr())
+
+	// Handle incoming connection in a separate goroutine
+	go handleConnection(conn, fileName)
 }
 
 ////////////////////////PROTO//////////////////////////////////
@@ -282,7 +278,6 @@ func main() {
 
 		} else {
 			fmt.Println("You chose to download a file.")
-			go downloadFile(myPortNumber)
 			// Call your download file function here
 			// ask the user for the file name
 			fmt.Print("Enter the file name: ")
@@ -290,7 +285,9 @@ func main() {
 			fmt.Scanln(&fileName)
 			// print the file name
 			fmt.Println("Your File name:", fileName)
-			// fake rpc will be replaced with the actual rpc call will get the port number of the data keeper
+
+			go downloadFile(myPortNumber, fileName)
+
 			resp2 := &pb.DownloadFileResponse{}
 			err = nil
 			resp2, err = c.DownloadFile(context.Background(), &pb.DownloadFileRequest{FileName: fileName})

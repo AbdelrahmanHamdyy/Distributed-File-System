@@ -179,7 +179,7 @@ func (s *server) TransferFile(ctx context.Context, req *pb.FilePortRequest) (*pb
 	// For demonstration purposes, let's just return a success response
 	/////////////////////////////////////////////////////////////////
 	// here must be replaced with the correct file path
-	filepath := req.Filename
+	filepath := req.Filename + ".mp4"
 	//////////////////////////////
 	uploadFileToPort(filepath, req.PortNumber)
 	////////////////////////////////////////////////////////////////

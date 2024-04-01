@@ -9,7 +9,7 @@ import (
 
 	pb "src/grpc" // Import the generated package
 
-	cl "src/DataClient/DataClient/filetransfer"
+	cl "src/DataClient/filetransfer"
 
 	"google.golang.org/grpc"
 )
