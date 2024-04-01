@@ -213,10 +213,22 @@ func uploadFile(port string) {
 }
 func main() {
 	fmt.Println("Hello, playground")
+	if len(os.Args) != 3 {
+			fmt.Println("Usage: program_name arg1 arg2")
+			return
+	}
+
+	arg1 := os.Args[1]
+	arg2 := os.Args[2]
+
+	fmt.Println("First argument:", arg1)
+	fmt.Println("Second argument:", arg2)
 	// for downloading
-	portNumber1 := "localhost:50051"
+	portNumber1 := arg1
+	portNumber1 = "localhost:50051"
 	// for uploading
-	portNumber2 := "localhost:50050"
+	portNumber2 := arg2
+	portNumber2 = "localhost:50050"
 	// 1- notify the master with alive message
 	// call service and send my portnumber
 	go waitAndPrint(portNumber1)
