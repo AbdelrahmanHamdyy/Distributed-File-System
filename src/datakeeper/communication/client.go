@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"time"
 
 	pb "src/grpc/datakeeper"
@@ -44,7 +45,7 @@ func (c *DataKeeperClient) Close() {
 }
 
 // define a main function
-func waitAndPrint(portNumber string) {
+func waitAndPrint(id int) {
 	for {
 		time.Sleep(time.Second)
 		// fmt.Println("1 second has passed", portNumber)
@@ -63,7 +64,7 @@ func waitAndPrint(portNumber string) {
 		c := ms.NewMasterTrackerServiceClient(conn)
 
 		// Calling RegisterFile service
-		_, err = c.Heartbeat(context.Background(), &ms.HeartbeatRequest{DataNodeId: 0})
+		_, err = c.Heartbeat(context.Background(), &ms.HeartbeatRequest{DataNodeId: int32(id)})
 		if err != nil {
 			fmt.Println("Error calling Heartbeat:", err)
 			return
@@ -89,7 +90,7 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	fmt.Println("File received and saved: " , fileName + ".mp4")
+	fmt.Println("File received and saved:" , fileName + ".mp4")
 
 	err = godotenv.Load()
 	if err != nil {
@@ -128,7 +129,7 @@ func listenForDownload(port string) {
 		return
 	}
 	defer listener.Close()
-	fmt.Println("[UPLOAD] Server started. Listening on port", port)
+	fmt.Println("[DOWNLOAD] Server started. Listening on port", port)
 
 	// Accept incoming connections
 	for {
@@ -206,32 +207,32 @@ func uploadFile(port string) {
 	pb.RegisterDataKeeperServiceServer(s, &server{})
 	pb.RegisterFileSaveServiceServer(s, &fileSaveNameServer{})
 	
-	log.Println("[DOWNLOAD] Server started. Listening on port", port)
+	log.Println("[UPLOAD] Server started. Listening on port", port)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
 func main() {
 	fmt.Println("Hello, playground")
-	if len(os.Args) != 3 {
-			fmt.Println("Usage: program_name arg1 arg2")
+	if len(os.Args) != 4 {
+			fmt.Println("Usage: program_name id arg1 arg2")
 			return
 	}
 
-	arg1 := os.Args[1]
-	arg2 := os.Args[2]
+	id := os.Args[1]
+	portNumber1 := os.Args[2]
+	portNumber2 := os.Args[3]
 
-	fmt.Println("First argument:", arg1)
-	fmt.Println("Second argument:", arg2)
-	// for downloading
-	portNumber1 := arg1
-	portNumber1 = "localhost:50051"
-	// for uploading
-	portNumber2 := arg2
-	portNumber2 = "localhost:50050"
-	// 1- notify the master with alive message
-	// call service and send my portnumber
-	go waitAndPrint(portNumber1)
+	fmt.Println("ID:", id)
+	fmt.Println("Download port number:", portNumber1)
+	fmt.Println("Upload port number:", portNumber2)
+
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		fmt.Println("Invalid id:", err)
+		return
+	}
+	go waitAndPrint(idInt)
 	//////////////////////////////////////////
 	// download from a client
 	go listenForDownload(portNumber1)
