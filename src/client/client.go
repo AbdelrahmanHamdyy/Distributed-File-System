@@ -91,15 +91,14 @@ func handleConnection(conn net.Conn, fileName string) {
 }
 
 // function download file from server
-func downloadFile(dataKeeperPort string, fileName string) {
-	// Listen for incoming connections on the specified data keeper port
-	listener, err := net.Listen("tcp", dataKeeperPort)
+func downloadFile(port string, fileName string) {
+	listener, err := net.Listen("tcp", port)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		return
 	}
 	defer listener.Close()
-	fmt.Println("Server started. Listening on port", dataKeeperPort)
+	fmt.Println("TCP Server started. Listening on port", port)
 
 	// Accept incoming connections
 	conn, err := listener.Accept()
@@ -135,11 +134,11 @@ func (s *successServer) ReportSuccess(ctx context.Context, request *filetransfer
 }
 
 func myServer() {
-	// Create a TCP listener on port 8080
 	lis, err := net.Listen("tcp", grpcPortNumber)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+	fmt.Printf("GRPC server started on port localhost%s\n", grpcPortNumber)
 
 	// Create a gRPC server
 	grpcServer := grpc.NewServer()
@@ -149,8 +148,6 @@ func myServer() {
 
 	// Register the SuccessService server
 	filetransfer.RegisterSuccessServiceServer(grpcServer, &successServer{})
-
-	fmt.Println("Server started. Listening on port", grpcPortNumber)
 
 	// Start the gRPC server
 	if err := grpcServer.Serve(lis); err != nil {
@@ -168,10 +165,8 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	// Retrieve the value of the environment variable named "MASTER_PORT"
 	masterPort := os.Getenv("MASTER_PORT")
 	myPortNumber := os.Getenv("CLIENT_PORT")
-	fmt.Println("Master Port:", masterPort)
 
 	conn, err := grpc.Dial(masterPort, grpc.WithInsecure())
 	if err != nil {
@@ -231,9 +226,7 @@ func main() {
 				return
 			}
 			successMsg := resp1.GetSuccess()
-			if successMsg {
-				fmt.Println("File name send successfully!")
-			} else {
+			if !successMsg {
 				fmt.Println("Error sending file name ")
 			}
 			uploadFile(filePath, dataKeeperPort)

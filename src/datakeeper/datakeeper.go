@@ -124,7 +124,7 @@ func listenForDownload(port string) {
 		return
 	}
 	defer listener.Close()
-	fmt.Println("[DOWNLOAD] Server started. Listening on port", port)
+	fmt.Println("TCP [DOWNLOAD] Server started. Listening on port", port)
 
 	// Accept incoming connections
 	for {
@@ -195,14 +195,13 @@ func uploadFile(port string) {
 	pb.RegisterDataKeeperServiceServer(s, &server{})
 	pb.RegisterFileSaveServiceServer(s, &fileSaveNameServer{})
 	
-	log.Println("[UPLOAD] Server started. Listening on port", port)
+	fmt.Println("GRPC [UPLOAD] Server started. Listening on port", port)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
 
 func main() {
-	fmt.Println("Hello, playground")
 	if len(os.Args) != 4 {
 		fmt.Println("Usage: program_name id arg1 arg2")
 		return
