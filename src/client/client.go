@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"strings"
@@ -162,7 +163,7 @@ func main() {
 
 	myPortNumber := os.Args[1]
 	grpcAddress := os.Args[2]
-	
+
 	// Load the environment variables from the .env file
 	err := godotenv.Load()
 	if err != nil {
@@ -257,8 +258,9 @@ func main() {
 				fmt.Println("Incorrect fileName or there are no aviailable data keepers.")
 				continue
 			}
-			dataKeeperPort := ports[0]
-			fmt.Println("Data keeper port:", dataKeeperPort)
+			// Pick a random port from the list of ports
+			dataKeeperPort := ports[rand.Intn(len(ports))]
+			fmt.Println("Download from Data keeper port:", dataKeeperPort)
 
 			conn, err = grpc.Dial(dataKeeperPort, grpc.WithInsecure())
 			if err != nil {
