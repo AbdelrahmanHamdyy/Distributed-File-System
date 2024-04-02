@@ -91,7 +91,7 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	fmt.Println("File received and saved:" , fileName + ".mp4")
+	fmt.Println("File received and saved:", fileName + ".mp4")
 
 	err = godotenv.Load()
 	if err != nil {
@@ -100,7 +100,6 @@ func handleConnection(conn net.Conn) {
 
 	// Connecting with master
 	masterPort := os.Getenv("MASTER_PORT")
-	fmt.Printf("Master port: %s\n", masterPort)
 	conn2, err2 := grpc.Dial(masterPort, grpc.WithInsecure())
 	if err2 != nil {
 		fmt.Println("did not connect:", err2)
@@ -108,15 +107,16 @@ func handleConnection(conn net.Conn) {
 	}
 	defer conn2.Close()
 	c := ms.NewMasterTrackerServiceClient(conn2)
-
+	idInt, _ := strconv.Atoi(id)
+	idInt32 := int32(idInt)
 	// Calling RegisterFile service
 	_, err = c.RegisterFile(context.Background(), &ms.RegisterFileRequest{
 		FileName: fileName,
-		DataNodeId: 0,
-		FilePath: fileName + ".mp4",
+		DataNodeId: idInt32,
+		FilePath: "datakeeper/" + id + "/" + fileName + ".mp4",
 	})
 	if err != nil {
-		fmt.Println("Error calling Capitalize:", err)
+		fmt.Println("Error calling RegisterFile:", err)
 		return
 	}
 }
@@ -132,17 +132,15 @@ func listenForDownload(port string) {
 	fmt.Println("TCP [DOWNLOAD] Server started. Listening on port", port)
 
 	// Accept incoming connections
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Println("Error accepting connection:", err.Error())
-			return
-		}
-		fmt.Println("Client connected:", conn.RemoteAddr())
-
-		// Handle incoming connection in a separate goroutine
-		go handleConnection(conn)
+	conn, err := listener.Accept()
+	if err != nil {
+		fmt.Println("Error accepting connection:", err.Error())
+		return
 	}
+	fmt.Println("Client connected:", conn.RemoteAddr())
+
+	// Handle incoming connection in a separate goroutine
+	go handleConnection(conn)
 }
 
 type server struct {
@@ -176,9 +174,35 @@ func uploadFileToPort(filePath string, clientPort string) {
 
 func (s *server) TransferFile(ctx context.Context, req *pb.FilePortRequest) (*pb.SuccessResponse, error) {
 	log.Printf("Received file %s to transfer on port %s\n", req.Filename, req.PortNumber)
-	filename := req.Filename + ".mp4"
-	filepath := "datakeeper/" + id + "/" + filename
+	filename := req.Filename
+	filepath := "datakeeper/" + id + "/" + filename + ".mp4"
 	uploadFileToPort(filepath, req.PortNumber)
+	return &pb.SuccessResponse{Success: true}, nil
+}
+
+func (s *server) ReplicateFile(ctx context.Context, req *pb.ReplicateFileRequest) (*pb.SuccessResponse, error) {
+	fileName = req.FileName
+	tcpAddr := req.TcpAddr
+	grpcAddr := req.GrpcAddr
+	filePath := "datakeeper/" + id + "/" + fileName + ".mp4"
+	conn1,err1 := grpc.Dial(grpcAddr, grpc.WithInsecure())
+	if err1 != nil {
+		fmt.Println("did not connect:", err1)
+		return &pb.SuccessResponse{Success: false}, nil
+	}
+	defer conn1.Close()
+	d := pb.NewFileSaveServiceClient(conn1)
+	// for sending filename
+	resp1, err1 := d.SaveFile(context.Background(), &pb.FileSaveRequest{Filename: fileName})
+	if err1 != nil {
+		fmt.Println("Error calling SaveFile:", err1)
+		return &pb.SuccessResponse{Success: false}, nil
+	}
+	successMsg := resp1.GetSuccess()
+	if !successMsg {
+		fmt.Println("Error sending file name ")
+	}
+	uploadFileToPort(filePath, tcpAddr)
 	return &pb.SuccessResponse{Success: true}, nil
 }
 

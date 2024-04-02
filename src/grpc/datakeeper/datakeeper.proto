@@ -9,12 +9,20 @@ message FilePortRequest {
     string port_number = 2;
 }
 
+message ReplicateFileRequest {
+    string fileName = 1;
+    string tcpAddr = 2;
+    string grpcAddr = 3;
+}
+
 message SuccessResponse {
     bool success = 1;
 }
 
 service DataKeeperService {
     rpc TransferFile(FilePortRequest) returns (SuccessResponse);
+
+    rpc ReplicateFile(ReplicateFileRequest) returns (SuccessResponse);
 }
 
 message fileSaveRequest {
