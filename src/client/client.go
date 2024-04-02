@@ -188,7 +188,7 @@ func main() {
 			})
 			if err != nil {
 				fmt.Println("Error calling UploadFile:", err)
-				return
+				continue
 			}
 			dataKeeperPort := resp.GetUploadAddress()
 			dataKeeperPortGrpc := resp.GetGrpcAddress()
@@ -208,29 +208,30 @@ func main() {
 			
 			if os.IsNotExist(err) {
 				fmt.Println("File does not exist.")
-				return
+				continue
 			}
 
 			// Connect to the data keeper
 			conn1,err1 := grpc.Dial(dataKeeperPortGrpc, grpc.WithInsecure())
 			if err1 != nil {
 				fmt.Println("did not connect:", err1)
-				return
+				continue
 			}
-			defer conn1.Close()
 			d := dk.NewFileSaveServiceClient(conn1)
 			// for sending filename
 			resp1, err1 := d.SaveFile(context.Background(), &dk.FileSaveRequest{Filename: fileName})
 			if err1 != nil {
 				fmt.Println("Error calling SaveFile:", err1)
-				return
+				continue
 			}
 			successMsg := resp1.GetSuccess()
 			if !successMsg {
 				fmt.Println("Error sending file name ")
+				continue
 			}
 			uploadFile(filePath, dataKeeperPort)
 			//////////////////////////////////////
+			conn1.Close()
 		} else {
 			fmt.Print("Enter the file name: ")
 			var fileName string
@@ -243,30 +244,34 @@ func main() {
 			resp2, err = c.DownloadFile(context.Background(), &pb.DownloadFileRequest{FileName: fileName})
 			if err != nil {
 				fmt.Println("Error calling DownloadFile:", err)
-				return
+				continue
 			}
 			ports := resp2.GetAddresses()
+			if len(ports) == 0 {
+				fmt.Println("Incorrect fileName or there are no aviailable data keepers.")
+				continue
+			}
 			dataKeeperPort := ports[0]
 			fmt.Println("Data keeper port:", dataKeeperPort)
 
 			conn, err = grpc.Dial(dataKeeperPort, grpc.WithInsecure())
 			if err != nil {
 				fmt.Println("did not connect:", err)
-				return
+				continue
 			}
-			defer conn.Close()
 			d := dk.NewDataKeeperServiceClient(conn)
 			resp3, err3 := d.TransferFile(context.Background(), &dk.FilePortRequest{Filename: fileName, PortNumber: myPortNumber})
 			if err3 != nil {
 				fmt.Println("Error calling DownloadFile:", err3)
-				return
+				continue
 			}
 			successMsg := resp3.GetSuccess()
 			if successMsg {
-				fmt.Println("File downloaded successfully!")
+			fmt.Println("File downloaded successfully!")
 			} else {
 				fmt.Println("Error downloading file")
 			}
+			conn.Close()
 		}
 	}
 }

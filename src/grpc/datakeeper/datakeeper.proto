@@ -19,10 +19,16 @@ message SuccessResponse {
     bool success = 1;
 }
 
+message CheckFileExistsRequest {
+    string filepath = 1;
+}
+
 service DataKeeperService {
     rpc TransferFile(FilePortRequest) returns (SuccessResponse);
 
     rpc ReplicateFile(ReplicateFileRequest) returns (SuccessResponse);
+
+    rpc CheckFileExists(CheckFileExistsRequest) returns (SuccessResponse);
 }
 
 message fileSaveRequest {

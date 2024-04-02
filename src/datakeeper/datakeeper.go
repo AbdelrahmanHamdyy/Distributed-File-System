@@ -132,22 +132,24 @@ func listenForDownload(port string) {
 	fmt.Println("TCP [DOWNLOAD] Server started. Listening on port", port)
 
 	// Accept incoming connections
-	conn, err := listener.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection:", err.Error())
-		return
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection:", err.Error())
+			return
+		}
+		fmt.Println("Client connected:", conn.RemoteAddr())
+	
+		// Handle incoming connection in a separate goroutine
+		go handleConnection(conn)
 	}
-	fmt.Println("Client connected:", conn.RemoteAddr())
-
-	// Handle incoming connection in a separate goroutine
-	go handleConnection(conn)
 }
 
 type server struct {
 	pb.UnimplementedDataKeeperServiceServer
 }
 
-func uploadFileToPort(filePath string, clientPort string) {
+func  uploadFileToPort(filePath string, clientPort string) {
 	conn, err := net.Dial("tcp", clientPort)
 	if err != nil {
 		fmt.Println("Error connecting:", err.Error())
@@ -180,6 +182,15 @@ func (s *server) TransferFile(ctx context.Context, req *pb.FilePortRequest) (*pb
 	return &pb.SuccessResponse{Success: true}, nil
 }
 
+func (s *server) CheckFileExists(ctx context.Context, req *pb.CheckFileExistsRequest) (*pb.SuccessResponse, error) {
+	filepath := req.GetFilepath()
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		return &pb.SuccessResponse{Success: false}, nil
+	} else {
+		return &pb.SuccessResponse{Success: true}, nil
+	}
+}
+
 func (s *server) ReplicateFile(ctx context.Context, req *pb.ReplicateFileRequest) (*pb.SuccessResponse, error) {
 	fileName = req.FileName
 	tcpAddr := req.TcpAddr
@@ -200,7 +211,9 @@ func (s *server) ReplicateFile(ctx context.Context, req *pb.ReplicateFileRequest
 	}
 	successMsg := resp1.GetSuccess()
 	if !successMsg {
-		fmt.Println("Error sending file name ")
+		fmt.Println("Error sending file name")
+	} else {
+		fmt.Println("File name sent")
 	}
 	uploadFileToPort(filePath, tcpAddr)
 	return &pb.SuccessResponse{Success: true}, nil
@@ -211,7 +224,7 @@ type fileSaveNameServer struct {
 }
 
 func (s *fileSaveNameServer) SaveFile(ctx context.Context, req *pb.FileSaveRequest) (*pb.SuccessResponse, error) {
-	log.Printf("Received file %s to save\n", req.Filename)
+	log.Printf("Received filename %s to save\n", req.Filename)
 	fileName = req.Filename
 	return &pb.SuccessResponse{Success: true}, nil
 }
@@ -260,6 +273,5 @@ func main() {
 	// upload to client
 	go uploadFile(portNumber2)
 
-	for {
-	}
+	for {}
 }

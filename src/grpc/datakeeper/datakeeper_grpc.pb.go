@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type DataKeeperServiceClient interface {
 	TransferFile(ctx context.Context, in *FilePortRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	ReplicateFile(ctx context.Context, in *ReplicateFileRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
+	CheckFileExists(ctx context.Context, in *CheckFileExistsRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 }
 
 type dataKeeperServiceClient struct {
@@ -52,12 +53,22 @@ func (c *dataKeeperServiceClient) ReplicateFile(ctx context.Context, in *Replica
 	return out, nil
 }
 
+func (c *dataKeeperServiceClient) CheckFileExists(ctx context.Context, in *CheckFileExistsRequest, opts ...grpc.CallOption) (*SuccessResponse, error) {
+	out := new(SuccessResponse)
+	err := c.cc.Invoke(ctx, "/datakeeper.DataKeeperService/CheckFileExists", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DataKeeperServiceServer is the server API for DataKeeperService service.
 // All implementations must embed UnimplementedDataKeeperServiceServer
 // for forward compatibility
 type DataKeeperServiceServer interface {
 	TransferFile(context.Context, *FilePortRequest) (*SuccessResponse, error)
 	ReplicateFile(context.Context, *ReplicateFileRequest) (*SuccessResponse, error)
+	CheckFileExists(context.Context, *CheckFileExistsRequest) (*SuccessResponse, error)
 	mustEmbedUnimplementedDataKeeperServiceServer()
 }
 
@@ -70,6 +81,9 @@ func (UnimplementedDataKeeperServiceServer) TransferFile(context.Context, *FileP
 }
 func (UnimplementedDataKeeperServiceServer) ReplicateFile(context.Context, *ReplicateFileRequest) (*SuccessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReplicateFile not implemented")
+}
+func (UnimplementedDataKeeperServiceServer) CheckFileExists(context.Context, *CheckFileExistsRequest) (*SuccessResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckFileExists not implemented")
 }
 func (UnimplementedDataKeeperServiceServer) mustEmbedUnimplementedDataKeeperServiceServer() {}
 
@@ -120,6 +134,24 @@ func _DataKeeperService_ReplicateFile_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataKeeperService_CheckFileExists_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckFileExistsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataKeeperServiceServer).CheckFileExists(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/datakeeper.DataKeeperService/CheckFileExists",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataKeeperServiceServer).CheckFileExists(ctx, req.(*CheckFileExistsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DataKeeperService_ServiceDesc is the grpc.ServiceDesc for DataKeeperService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +166,10 @@ var DataKeeperService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReplicateFile",
 			Handler:    _DataKeeperService_ReplicateFile_Handler,
+		},
+		{
+			MethodName: "CheckFileExists",
+			Handler:    _DataKeeperService_CheckFileExists_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
