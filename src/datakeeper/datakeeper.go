@@ -19,6 +19,7 @@ import (
 )
 
 var fileName = "received"
+var id string
 
 // DataKeeperClient represents a gRPC client for communicating with the Data Keeper node.
 type DataKeeperClient struct {
@@ -71,8 +72,12 @@ func waitAndPrint(id int) {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
+	folderPath := "datakeeper/" + id + "/"
+	if _, err := os.Stat(folderPath); os.IsNotExist(err) {
+		os.Mkdir(folderPath, 0755)
+	}
 	// Create a new file to save the received .mp4 file
-	file, err := os.Create(fileName + ".mp4")
+	file, err := os.Create(folderPath + fileName + ".mp4")
 	if err != nil {
 		fmt.Println("Error creating file:", err.Error())
 		return
@@ -171,7 +176,8 @@ func uploadFileToPort(filePath string, clientPort string) {
 
 func (s *server) TransferFile(ctx context.Context, req *pb.FilePortRequest) (*pb.SuccessResponse, error) {
 	log.Printf("Received file %s to transfer on port %s\n", req.Filename, req.PortNumber)
-	filepath := req.Filename + ".mp4"
+	filename := req.Filename + ".mp4"
+	filepath := "datakeeper/" + id + "/" + filename
 	uploadFileToPort(filepath, req.PortNumber)
 	return &pb.SuccessResponse{Success: true}, nil
 }
@@ -207,7 +213,7 @@ func main() {
 		return
 	}
 
-	id := os.Args[1]
+	id = os.Args[1]
 	portNumber1 := os.Args[2]
 	portNumber2 := os.Args[3]
 

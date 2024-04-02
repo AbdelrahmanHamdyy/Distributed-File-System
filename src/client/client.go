@@ -73,7 +73,7 @@ func handleConnection(conn net.Conn, fileName string) {
 	defer conn.Close()
 
 	// Create a new file to save the received .mp4 file
-	file, err := os.Create(fileName + ".mp4")
+	file, err := os.Create("client/" + fileName + ".mp4")
 	if err != nil {
 		fmt.Println("Error creating file:", err.Error())
 		return
