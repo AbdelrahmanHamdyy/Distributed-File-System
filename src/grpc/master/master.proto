@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package master;
+
+option go_package = "src/grpc/master";
+
+// Define service for Master Tracker
+service MasterTrackerService {
+    // Heartbeat service for DataNode
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+    // Upload file service for DataNode
+    rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+
+    // Register service for DataNode
+    rpc RegisterFile(RegisterFileRequest) returns (RegisterFileResponse);
+
+    // Download file service for Client
+    rpc DownloadFile(DownloadFileRequest) returns (DownloadFileResponse);
+}
+
+message HeartbeatRequest {
+    int32 dataNodeId = 1;
+}
+
+message HeartbeatResponse {
+    bool success = 1;
+}
+
+message UploadFileRequest {
+    string clientPort = 1;
+}
+
+message UploadFileResponse {
+    string UploadAddress = 1;
+    string grpcAddress = 2;
+}
+
+message RegisterFileRequest {
+    string fileName = 1;
+    string filePath = 2;
+    int32 dataNodeId = 3;
+}
+
+message RegisterFileResponse {
+    bool success = 1;
+}
+
+message DownloadFileRequest {
+    string fileName = 1;
+}
+
+message DownloadFileResponse {
+    repeated string addresses = 1;
+}

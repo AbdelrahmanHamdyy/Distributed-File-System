@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package datakeeper;
+
+option go_package = "src/grpc/datakeeper";
+
+message FilePortRequest {
+    string filename = 1;
+    string port_number = 2;
+}
+
+message ReplicateFileRequest {
+    string fileName = 1;
+    string tcpAddr = 2;
+    string grpcAddr = 3;
+}
+
+message SuccessResponse {
+    bool success = 1;
+}
+
+message CheckFileExistsRequest {
+    string filepath = 1;
+}
+
+service DataKeeperService {
+    rpc TransferFile(FilePortRequest) returns (SuccessResponse);
+
+    rpc ReplicateFile(ReplicateFileRequest) returns (SuccessResponse);
+
+    rpc CheckFileExists(CheckFileExistsRequest) returns (SuccessResponse);
+}
+
+message fileSaveRequest {
+    string filename = 1;
+}
+
+service FileSaveService {
+    rpc SaveFile(fileSaveRequest) returns (SuccessResponse);
+}
