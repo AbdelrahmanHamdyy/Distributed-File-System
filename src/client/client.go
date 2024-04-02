@@ -19,8 +19,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-var grpcPortNumber = ":3000"
-
 func getUserChoice() string {
 	var text string
 	for {
@@ -133,12 +131,12 @@ func (s *successServer) ReportSuccess(ctx context.Context, request *filetransfer
 	return &filetransfer.SuccessResponse{Success: true}, nil
 }
 
-func myServer() {
-	lis, err := net.Listen("tcp", grpcPortNumber)
+func myServer(grpcAddress string) {
+	lis, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	fmt.Printf("GRPC server started on port localhost%s\n", grpcPortNumber)
+	fmt.Printf("GRPC server started on port %s\n", grpcAddress)
 
 	// Create a gRPC server
 	grpcServer := grpc.NewServer()
@@ -156,17 +154,25 @@ func myServer() {
 }
 
 func main() {
-	// Start the gRPC server in a separate goroutine
-	go myServer()
+	// read port and grpc port from terminal args
+	if len(os.Args) != 3 {
+		fmt.Println("Usage: go run client.go <port> <grpc_port>")
+		return
+	}
 
+	myPortNumber := os.Args[1]
+	grpcAddress := os.Args[2]
+	
 	// Load the environment variables from the .env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-
 	masterPort := os.Getenv("MASTER_PORT")
-	myPortNumber := os.Getenv("CLIENT_PORT")
+
+	// Start the gRPC server in a separate goroutine
+	go myServer(grpcAddress)
+
 
 	conn, err := grpc.Dial(masterPort, grpc.WithInsecure())
 	if err != nil {
@@ -184,7 +190,7 @@ func main() {
 		err = nil
 		if userChoice == "1" {
 			resp, err = c.UploadFile(context.Background(), &pb.UploadFileRequest{
-				ClientPort: "localhost" + grpcPortNumber,
+				ClientPort: grpcAddress,
 			})
 			if err != nil {
 				fmt.Println("Error calling UploadFile:", err)
