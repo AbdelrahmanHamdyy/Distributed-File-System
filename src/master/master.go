@@ -175,7 +175,7 @@ func checkAliveDataNodes() {
 func Replication() {
 	for {
 		time.Sleep(10 * time.Second)
-		// Each file should exist on at least 3 alive data nodes. If not, replicate it to one of the alive nodes.
+		// Each file should exist on atleast 3 alive data nodes. If not, replicate it to one of the alive nodes.
 		// create a map with key filename and value will be an array of ids of the data nodes where the file is stored
 		fileMap := make(map[string][]int32)
 		for _, file := range fileLookupTable {
@@ -192,20 +192,21 @@ func Replication() {
 					for int32(destinationId) == fileMap[file.FileName][0] || int32(destinationId) == fileMap[file.FileName][1] || !dataNodeLookupTable[destinationId].isAlive {
 						destinationId = rand.Intn(numDataNodes)
 					}
-					// conn, err := grpc.Dial(dataNodeLookupTable[fileMap[file.FileName][0]].address, grpc.WithInsecure())
-					// if err != nil {
-					// 	fmt.Println("Did not connect:", err)
-					// 	return
-					// }
-					// defer conn.Close()
-					// c := pb.NewDataNodeServiceKeeper(conn)
-					// address := dataNodeLookupTable[destinationId].address
-					// resp, err := c.ReplicateFile(context.Background(), &pb.ReplicationRequest{FileName: file.FileName, Address: address})
-					// if err != nil {
-					// 	fmt.Println("Error notifying the client:", err)
-					// 	return
-					// }
-					// fmt.Println("Replication Status:", resp.GetReplicationStatus())
+					conn, err := grpc.Dial(dataNodeLookupTable[fileMap[file.FileName][0]].downloadAddress, grpc.WithInsecure())
+					if err != nil {
+						fmt.Println("Did not connect:", err)
+						return
+					}
+					defer conn.Close()
+					c := dk.NewDataKeeperServiceClient(conn)
+					tcpAddr := dataNodeLookupTable[destinationId].address
+					grpcAddr := dataNodeLookupTable[destinationId].downloadAddress
+					resp, err := c.ReplicateFile(context.Background(), &dk.ReplicateFileRequest{FileName: file.FileName, TcpAddr: tcpAddr, GrpcAddr: grpcAddr})
+					if err != nil {
+						fmt.Println("Error notifying the client:", err)
+						return
+					}
+					fmt.Println("Replication Status:", resp.GetSuccess())
 				} else if len(fileMap[file.FileName]) == 1 {
 					chooseNodesToReplicate(file.FileName, fileMap[file.FileName][0])
 				}
@@ -239,7 +240,7 @@ func main() {
 	fmt.Println("Server started. Listening on port 8080...")
 	
 	go checkAliveDataNodes()
-	// go Replication()
+	go Replication()
 
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("Failed to serve:", err)
