@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"net"
+	"os"
 	"time"
 
 	pb "src/grpc/master" // Import the generated package
@@ -13,6 +15,7 @@ import (
 
 	dk "src/grpc/datakeeper"
 
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 )
 
@@ -269,7 +272,13 @@ func populateDataKeepers() {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":8080")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	masterPort := os.Getenv("MASTER_PORT")
+
+	lis, err := net.Listen("tcp", masterPort)
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
@@ -279,7 +288,7 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterMasterTrackerServiceServer(s, &masterServer{})
-	fmt.Println("Server started. Listening on port 8080...")
+	fmt.Println("Server started. Listening on port", masterPort)
 	
 	go checkAliveDataNodes()
 	go Replication()
