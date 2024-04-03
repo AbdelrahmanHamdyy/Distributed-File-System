@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"regexp"
 	"strings"
 
 	"src/grpc/filetransfer" // Import the generated package
@@ -154,6 +155,13 @@ func myServer(grpcAddress string) {
 	}
 }
 
+func isValidFileName(fileName string) bool {
+	// Regular expression to match file name
+	regex := "^[a-zA-Z0-9_-]+$"
+	match, _ := regexp.MatchString(regex, fileName)
+	return match
+}
+
 func main() {
 	// read port and grpc port from terminal args
 	if len(os.Args) != 3 {
@@ -218,6 +226,12 @@ func main() {
 				continue
 			}
 
+			// Validate file name (Can contain only letters, numbers, underscores, and hyphens)
+			if !isValidFileName(fileName) {
+				fmt.Println("Invalid file name. File name can contain only letters, numbers, underscores, and hyphens.")
+				continue
+			}
+
 			// Connect to the data keeper
 			conn1,err1 := grpc.Dial(dataKeeperPortGrpc, grpc.WithInsecure())
 			if err1 != nil {
@@ -243,6 +257,11 @@ func main() {
 			fmt.Print("Enter the file name: ")
 			var fileName string
 			fmt.Scanln(&fileName)
+
+			if !isValidFileName(fileName) {
+				fmt.Println("Invalid file name. File name can contain only letters, numbers, underscores, and hyphens.")
+				continue
+			}
 
 			go downloadFile(myPortNumber, fileName)
 
