@@ -75,17 +75,21 @@ func notifyClient() {
 	fmt.Println("Client Status:", resp.GetSuccess())
 }
 
-func chooseTwoRandomNodes(dataNodeId int32) []int32 {
-	// Pick the first Id
-	nodeIds := make([]int32, 2)
+func chooseOneRandomNode(dataNodeId int32) int32 {
 	nodeId := rand.Intn(numDataNodes)
 	for nodeId == int(dataNodeId) || !dataNodeLookupTable[nodeId].isAlive {
 		nodeId = rand.Intn(numDataNodes)
 	}
-	nodeIds[0] = int32(nodeId)
+	return int32(nodeId)
+}
+
+func chooseTwoRandomNodes(dataNodeId int32) []int32 {
+	// Pick the first Id
+	nodeIds := make([]int32, 2)
+	nodeIds[0] = chooseOneRandomNode(dataNodeId)
 
 	// Pick the second Id
-	nodeId = rand.Intn(numDataNodes)
+	nodeId := rand.Intn(numDataNodes)
 	for nodeId == int(dataNodeId) || nodeId == int(nodeIds[0]) || !dataNodeLookupTable[nodeId].isAlive {
 		nodeId = rand.Intn(numDataNodes)
 	}
@@ -94,33 +98,70 @@ func chooseTwoRandomNodes(dataNodeId int32) []int32 {
 	return nodeIds
 }
 
-func chooseNodesToReplicate(fileName string, dataNodeId int32){
-	nodeIds := chooseTwoRandomNodes(dataNodeId)
-	fmt.Printf("Sending the 2 nodes to Data node %d\n", dataNodeId)
-	conn, err := grpc.Dial(dataNodeLookupTable[dataNodeId].downloadAddress, grpc.WithInsecure())
-	if err != nil {
-		fmt.Println("Did not connect:", err)
-		return
+func getAliveNodesCount() int {
+	count := 0
+	for _, node := range dataNodeLookupTable {
+		if node.isAlive {
+			count++
+		}
 	}
-	defer conn.Close()
-	c := dk.NewDataKeeperServiceClient(conn)
-	address := dataNodeLookupTable[nodeIds[0]].address
-	grpcAddr := dataNodeLookupTable[nodeIds[0]].downloadAddress
-	resp, err := c.ReplicateFile(context.Background(), &dk.ReplicateFileRequest{FileName: fileName, TcpAddr: address, GrpcAddr: grpcAddr})
-	if err != nil {
-		fmt.Println("Error sending to datakeeper:", err)
-		return
-	}
-	fmt.Println("First Data Node response:", resp.GetSuccess())
+	return count
+}
 
-	address = dataNodeLookupTable[nodeIds[1]].address
-	grpcAddr = dataNodeLookupTable[nodeIds[1]].downloadAddress
-	resp, err = c.ReplicateFile(context.Background(), &dk.ReplicateFileRequest{FileName: fileName, TcpAddr: address, GrpcAddr: grpcAddr})
-	if err != nil {
-		fmt.Println("Error sending to datakeeper:", err)
+func chooseNodesToReplicate(fileName string, dataNodeId int32){
+	// Check that The number of alive data nodes must be atleast 3
+	aliveCount := getAliveNodesCount()
+
+	if aliveCount == 1 {
+		fmt.Println("There is only one alive data node. Cannot replicate the file.")
 		return
+	} else if aliveCount == 2 {
+		fmt.Println("There are only two alive data nodes. Replicating the file to the other node.")
+		nodeId := chooseOneRandomNode(dataNodeId)
+		conn, err := grpc.Dial(dataNodeLookupTable[dataNodeId].downloadAddress, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("Did not connect:", err)
+			return
+		}
+		defer conn.Close()
+		c := dk.NewDataKeeperServiceClient(conn)
+		address := dataNodeLookupTable[nodeId].address
+		grpcAddr := dataNodeLookupTable[nodeId].downloadAddress
+		resp, err := c.ReplicateFile(context.Background(), &dk.ReplicateFileRequest{FileName: fileName, TcpAddr: address, GrpcAddr: grpcAddr})
+		if err != nil {
+			fmt.Println("Error sending to datakeeper:", err)
+			return
+		}
+		fmt.Println("Data Node response:", resp.GetSuccess())
+		return
+	} else {
+		nodeIds := chooseTwoRandomNodes(dataNodeId)
+		fmt.Printf("Sending the 2 nodes to Data node %d\n", dataNodeId)
+		conn, err := grpc.Dial(dataNodeLookupTable[dataNodeId].downloadAddress, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("Did not connect:", err)
+			return
+		}
+		defer conn.Close()
+		c := dk.NewDataKeeperServiceClient(conn)
+		address := dataNodeLookupTable[nodeIds[0]].address
+		grpcAddr := dataNodeLookupTable[nodeIds[0]].downloadAddress
+		resp, err := c.ReplicateFile(context.Background(), &dk.ReplicateFileRequest{FileName: fileName, TcpAddr: address, GrpcAddr: grpcAddr})
+		if err != nil {
+			fmt.Println("Error sending to datakeeper:", err)
+			return
+		}
+		fmt.Println("First Data Node response:", resp.GetSuccess())
+	
+		address = dataNodeLookupTable[nodeIds[1]].address
+		grpcAddr = dataNodeLookupTable[nodeIds[1]].downloadAddress
+		resp, err = c.ReplicateFile(context.Background(), &dk.ReplicateFileRequest{FileName: fileName, TcpAddr: address, GrpcAddr: grpcAddr})
+		if err != nil {
+			fmt.Println("Error sending to datakeeper:", err)
+			return
+		}
+		fmt.Println("Second Data Node response:", resp.GetSuccess())
 	}
-	fmt.Println("Second Data Node response:", resp.GetSuccess())
 }
 
 func (s *masterServer) RegisterFile(ctx context.Context, req *pb.RegisterFileRequest) (*pb.RegisterFileResponse, error) {
@@ -161,7 +202,7 @@ func (s *masterServer) DownloadFile(ctx context.Context, req *pb.DownloadFileReq
 
 func checkAliveDataNodes() {
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 		for i := 0; i < numDataNodes; i++ {
 			if dataNodesHeartbeats[i] == 0 {
 				fmt.Printf("Data Keeper node %d is dead\n", i)
@@ -184,23 +225,25 @@ func Replication() {
 		toBeRemoved := make(map[string][]int32)
 		for _, file := range fileLookupTable {
 			// call grpc to check if file still exists
-			conn, err := grpc.Dial(dataNodeLookupTable[file.DataNodeId].downloadAddress, grpc.WithInsecure())
-			if err != nil {
-				fmt.Println("Did not connect:", err)
-				return
-			}
-			defer conn.Close()
-			c := dk.NewDataKeeperServiceClient(conn)
-			resp, err := c.CheckFileExists(context.Background(), &dk.CheckFileExistsRequest{Filepath: file.FilePath})
-			if err != nil {
-				fmt.Println("Error checking file:", err)
-				return
-			}
-			if resp.GetSuccess() {
-				fileMap[file.FileName] = append(fileMap[file.FileName], file.DataNodeId)
-			} else {
-				fmt.Printf("File %s no longer exists on Data Keeper %d\n", file.FileName, file.DataNodeId)
-				toBeRemoved[file.FileName] = append(toBeRemoved[file.FileName], file.DataNodeId)
+			if dataNodeLookupTable[file.DataNodeId].isAlive {
+				conn, err := grpc.Dial(dataNodeLookupTable[file.DataNodeId].downloadAddress, grpc.WithInsecure())
+				if err != nil {
+					fmt.Println("Did not connect:", err)
+					return
+				}
+				defer conn.Close()
+				c := dk.NewDataKeeperServiceClient(conn)
+				resp, err := c.CheckFileExists(context.Background(), &dk.CheckFileExistsRequest{Filepath: file.FilePath})
+				if err != nil {
+					fmt.Println("Error checking file:", err)
+					return
+				}
+				if resp.GetSuccess() {
+					fileMap[file.FileName] = append(fileMap[file.FileName], file.DataNodeId)
+				} else {
+					fmt.Printf("File %s no longer exists on Data Keeper %d\n", file.FileName, file.DataNodeId)
+					toBeRemoved[file.FileName] = append(toBeRemoved[file.FileName], file.DataNodeId)
+				}
 			}
 		}
 
@@ -231,6 +274,10 @@ func Replication() {
 			if len(nodes) < 3 {
 				// choose new data node ids for the fileName until the count is restored to 3, then notify the source and destination nodes to start copying
 				if len(nodes) == 2 {
+					aliveCount := getAliveNodesCount()
+					if aliveCount == 2 {
+						continue
+					}
 					destinationId := rand.Intn(numDataNodes)
 					for int32(destinationId) == nodes[0] || int32(destinationId) == nodes[1] || !dataNodeLookupTable[destinationId].isAlive {
 						destinationId = rand.Intn(numDataNodes)
