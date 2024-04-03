@@ -23,12 +23,24 @@ message CheckFileExistsRequest {
     string filepath = 1;
 }
 
+message DownloadChunkRequest {
+    string fileName = 1;
+    int64 startByte = 2;
+    int64 endByte = 3;
+}
+
+message DownloadChunkResponse {
+    bytes chunk = 1;
+}
+
 service DataKeeperService {
     rpc TransferFile(FilePortRequest) returns (SuccessResponse);
 
     rpc ReplicateFile(ReplicateFileRequest) returns (SuccessResponse);
 
     rpc CheckFileExists(CheckFileExistsRequest) returns (SuccessResponse);
+
+    rpc DownloadChunk(DownloadChunkRequest) returns (DownloadChunkResponse);
 }
 
 message fileSaveRequest {

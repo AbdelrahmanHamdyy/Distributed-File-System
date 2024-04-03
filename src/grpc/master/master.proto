@@ -40,6 +40,7 @@ message RegisterFileRequest {
     string fileName = 1;
     string filePath = 2;
     int32 dataNodeId = 3;
+    int64 fileSize = 4;
 }
 
 message RegisterFileResponse {
@@ -52,4 +53,5 @@ message DownloadFileRequest {
 
 message DownloadFileResponse {
     repeated string addresses = 1;
+    int64 fileSize = 2;
 }

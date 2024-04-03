@@ -21,6 +21,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+const PARALLEL_DOWNLOAD = true
+
 func getUserChoice() string {
 	var text string
 	for {
@@ -162,6 +164,110 @@ func isValidFileName(fileName string) bool {
 	return match
 }
 
+func download(ports []string, fileName string, myPortNumber string) {
+	dataKeeperPort := ports[rand.Intn(len(ports))]
+	fmt.Println("Download from Data keeper port:", dataKeeperPort)
+
+	conn, err := grpc.Dial(dataKeeperPort, grpc.WithInsecure())
+	if err != nil {
+		fmt.Println("did not connect:", err)
+		return
+	}
+	defer conn.Close()
+	d := dk.NewDataKeeperServiceClient(conn)
+	resp3, err3 := d.TransferFile(context.Background(), &dk.FilePortRequest{Filename: fileName, PortNumber: myPortNumber})
+	if err3 != nil {
+		fmt.Println("Error calling DownloadFile:", err3)
+		return
+	}
+	successMsg := resp3.GetSuccess()
+	if successMsg {
+	fmt.Println("File downloaded successfully!")
+	} else {
+		fmt.Println("Error downloading file")
+	}
+}
+
+func downloadChunk(dataKeeperPort string, fileName string, startByte int64, endByte int64) ([]byte, error) {
+	conn, err := grpc.Dial(dataKeeperPort, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to data keeper: %v", err)
+	}
+	defer conn.Close()
+
+	c := dk.NewDataKeeperServiceClient(conn)
+	resp, err := c.DownloadChunk(context.Background(), &dk.DownloadChunkRequest{
+		FileName:  fileName,
+		StartByte: startByte,
+		EndByte:   endByte,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error downloading chunk from data keeper: %v", err)
+	}
+
+	return resp.GetChunk(), nil
+}
+
+func downloadFileParallel(fileName string, fileSize int64, ports []string, numChunks int) ([]byte, error) {
+	chunkSize := fileSize / int64(numChunks)
+
+	// Create channels to collect chunks from different goroutines
+	chunkChannels := make([]chan []byte, numChunks)
+	for i := range chunkChannels {
+		chunkChannels[i] = make(chan []byte)
+	}
+
+	// Download chunks from different data keepers concurrently
+	for i := 0; i < numChunks; i++ {
+		startByte := int64(i) * chunkSize
+		endByte := startByte + chunkSize - 1
+		if i == numChunks-1 {
+			endByte = fileSize - 1 // Ensure last chunk reaches EOF
+		}
+
+		go func(index int, start, end int64) {
+			dataKeeperPort := ports[index%len(ports)] // Round-robin selection of data keeper
+			chunk, err := downloadChunk(dataKeeperPort, fileName, start, end)
+			if err != nil {
+				fmt.Printf("Error downloading chunk %d: %v\n", index, err)
+				chunkChannels[index] <- nil
+				return
+			}
+			chunkChannels[index] <- chunk
+		}(i, startByte, endByte)
+	}
+
+	// Collect all chunks from channels
+	var fileContent []byte
+	for _, ch := range chunkChannels {
+		chunk := <-ch
+		if chunk == nil {
+			return nil, fmt.Errorf("error downloading one or more chunks")
+		}
+		fileContent = append(fileContent, chunk...)
+	}
+
+	return fileContent, nil
+}
+
+func parallelDownload(ports []string, fileName string, fileSize int64) {
+	numChunks := len(ports) // Number of data keepers
+	fileContent, err := downloadFileParallel(fileName, fileSize, ports, numChunks)
+	if err != nil {
+		fmt.Println("Error downloading file:", err)
+		return
+	}
+
+	// Save the downloaded file
+	err = os.WriteFile("client/" + fileName + ".mp4", fileContent, 0644)
+	if err != nil {
+		fmt.Println("Error saving file:", err)
+		return
+	}
+	fmt.Println("File downloaded successfully!")	
+}
+
 func main() {
 	// read port and grpc port from terminal args
 	if len(os.Args) != 3 {
@@ -263,8 +369,7 @@ func main() {
 				continue
 			}
 
-			go downloadFile(myPortNumber, fileName)
-
+			
 			resp2 := &pb.DownloadFileResponse{}
 			err = nil
 			resp2, err = c.DownloadFile(context.Background(), &pb.DownloadFileRequest{FileName: fileName})
@@ -273,32 +378,19 @@ func main() {
 				continue
 			}
 			ports := resp2.GetAddresses()
+			fileSize := resp2.GetFileSize()
 			if len(ports) == 0 {
 				fmt.Println("Incorrect fileName or there are no aviailable data keepers.")
 				continue
 			}
-			// Pick a random port from the list of ports
-			dataKeeperPort := ports[rand.Intn(len(ports))]
-			fmt.Println("Download from Data keeper port:", dataKeeperPort)
-
-			conn, err = grpc.Dial(dataKeeperPort, grpc.WithInsecure())
-			if err != nil {
-				fmt.Println("did not connect:", err)
-				continue
-			}
-			d := dk.NewDataKeeperServiceClient(conn)
-			resp3, err3 := d.TransferFile(context.Background(), &dk.FilePortRequest{Filename: fileName, PortNumber: myPortNumber})
-			if err3 != nil {
-				fmt.Println("Error calling DownloadFile:", err3)
-				continue
-			}
-			successMsg := resp3.GetSuccess()
-			if successMsg {
-			fmt.Println("File downloaded successfully!")
+			fmt.Println("Number of data keepers:", len(ports))
+			fmt.Println("File size:", fileSize)
+			if PARALLEL_DOWNLOAD {
+				parallelDownload(ports, fileName, fileSize)
 			} else {
-				fmt.Println("Error downloading file")
+				go downloadFile(myPortNumber, fileName)
+				download(ports, fileName, myPortNumber)
 			}
-			conn.Close()
 		}
 	}
 }

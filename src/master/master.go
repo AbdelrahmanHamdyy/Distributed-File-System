@@ -36,6 +36,7 @@ type FileMetadata struct {
 	FileName   string // File name
 	DataNodeId int32  // Data Keeper node where the file is stored
 	FilePath   string // File path on the Data Keeper node
+	Size 	   int64  // File size
 }
 
 var dataNodesHeartbeats = make([]int, numDataNodes)
@@ -179,7 +180,8 @@ func (s *masterServer) RegisterFile(ctx context.Context, req *pb.RegisterFileReq
 
 	dataNodeId := req.GetDataNodeId()
 	filePath := req.GetFilePath()
-	fileMetadata := FileMetadata{FileName: fileName, DataNodeId: dataNodeId, FilePath: filePath}
+	fileSize := req.GetFileSize()
+	fileMetadata := FileMetadata{FileName: fileName, DataNodeId: dataNodeId, FilePath: filePath, Size: fileSize}
 	fileLookupTable = append(fileLookupTable, fileMetadata)
 
 	if !replicate {
@@ -192,12 +194,14 @@ func (s *masterServer) RegisterFile(ctx context.Context, req *pb.RegisterFileReq
 func (s *masterServer) DownloadFile(ctx context.Context, req *pb.DownloadFileRequest) (*pb.DownloadFileResponse, error) {
 	fileName := req.GetFileName()
 	addresses := make([]string, 0)
+	fileSize := int64(0)
 	for _, file := range fileLookupTable {
 		if file.FileName == fileName && dataNodeLookupTable[file.DataNodeId].isAlive {
 			addresses = append(addresses, dataNodeLookupTable[file.DataNodeId].downloadAddress)
+			fileSize = file.Size
 		}
 	}
-	return &pb.DownloadFileResponse{Addresses: addresses}, nil
+	return &pb.DownloadFileResponse{Addresses: addresses, FileSize: fileSize}, nil
 }
 
 func checkAliveDataNodes() {
@@ -276,6 +280,7 @@ func Replication() {
 				if len(nodes) == 2 {
 					aliveCount := getAliveNodesCount()
 					if aliveCount == 2 {
+						fmt.Print("[REPLICATION] There are only two alive data nodes.\n")
 						continue
 					}
 					destinationId := rand.Intn(numDataNodes)
@@ -300,7 +305,7 @@ func Replication() {
 				} else if len(nodes) == 1 {
 					chooseNodesToReplicate(fileName, nodes[0])
 				} else {
-					fmt.Println("File does not exist on any data node")
+					fmt.Println("[REPLICATION] File does not exist on any data node")
 				}
 			}
 		}

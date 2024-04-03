@@ -25,6 +25,7 @@ type DataKeeperServiceClient interface {
 	TransferFile(ctx context.Context, in *FilePortRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	ReplicateFile(ctx context.Context, in *ReplicateFileRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	CheckFileExists(ctx context.Context, in *CheckFileExistsRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
+	DownloadChunk(ctx context.Context, in *DownloadChunkRequest, opts ...grpc.CallOption) (*DownloadChunkResponse, error)
 }
 
 type dataKeeperServiceClient struct {
@@ -62,6 +63,15 @@ func (c *dataKeeperServiceClient) CheckFileExists(ctx context.Context, in *Check
 	return out, nil
 }
 
+func (c *dataKeeperServiceClient) DownloadChunk(ctx context.Context, in *DownloadChunkRequest, opts ...grpc.CallOption) (*DownloadChunkResponse, error) {
+	out := new(DownloadChunkResponse)
+	err := c.cc.Invoke(ctx, "/datakeeper.DataKeeperService/DownloadChunk", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DataKeeperServiceServer is the server API for DataKeeperService service.
 // All implementations must embed UnimplementedDataKeeperServiceServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type DataKeeperServiceServer interface {
 	TransferFile(context.Context, *FilePortRequest) (*SuccessResponse, error)
 	ReplicateFile(context.Context, *ReplicateFileRequest) (*SuccessResponse, error)
 	CheckFileExists(context.Context, *CheckFileExistsRequest) (*SuccessResponse, error)
+	DownloadChunk(context.Context, *DownloadChunkRequest) (*DownloadChunkResponse, error)
 	mustEmbedUnimplementedDataKeeperServiceServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedDataKeeperServiceServer) ReplicateFile(context.Context, *Repl
 }
 func (UnimplementedDataKeeperServiceServer) CheckFileExists(context.Context, *CheckFileExistsRequest) (*SuccessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckFileExists not implemented")
+}
+func (UnimplementedDataKeeperServiceServer) DownloadChunk(context.Context, *DownloadChunkRequest) (*DownloadChunkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DownloadChunk not implemented")
 }
 func (UnimplementedDataKeeperServiceServer) mustEmbedUnimplementedDataKeeperServiceServer() {}
 
@@ -152,6 +166,24 @@ func _DataKeeperService_CheckFileExists_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataKeeperService_DownloadChunk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadChunkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataKeeperServiceServer).DownloadChunk(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/datakeeper.DataKeeperService/DownloadChunk",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataKeeperServiceServer).DownloadChunk(ctx, req.(*DownloadChunkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DataKeeperService_ServiceDesc is the grpc.ServiceDesc for DataKeeperService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var DataKeeperService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CheckFileExists",
 			Handler:    _DataKeeperService_CheckFileExists_Handler,
+		},
+		{
+			MethodName: "DownloadChunk",
+			Handler:    _DataKeeperService_DownloadChunk_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -109,11 +109,21 @@ func handleConnection(conn net.Conn) {
 	c := ms.NewMasterTrackerServiceClient(conn2)
 	idInt, _ := strconv.Atoi(id)
 	idInt32 := int32(idInt)
+
+	// Get the file size
+	fileInfo, err := file.Stat()
+	if err != nil {
+		fmt.Println("Error getting file info:", err)
+		return
+	}
+	fileSize := fileInfo.Size()
+
 	// Calling RegisterFile service
 	_, err = c.RegisterFile(context.Background(), &ms.RegisterFileRequest{
 		FileName: fileName,
 		DataNodeId: idInt32,
 		FilePath: "datakeeper/" + id + "/" + fileName + ".mp4",
+		FileSize: fileSize,
 	})
 	if err != nil {
 		fmt.Println("Error calling RegisterFile:", err)
@@ -180,6 +190,43 @@ func (s *server) TransferFile(ctx context.Context, req *pb.FilePortRequest) (*pb
 	filepath := "datakeeper/" + id + "/" + filename + ".mp4"
 	uploadFileToPort(filepath, req.PortNumber)
 	return &pb.SuccessResponse{Success: true}, nil
+}
+
+func (s *server) DownloadChunk(ctx context.Context, req *pb.DownloadChunkRequest) (*pb.DownloadChunkResponse, error) {
+	fileName := req.GetFileName()
+	startByte := req.GetStartByte()
+	endByte := req.GetEndByte()
+	filePath := "datakeeper/" + id + "/" + fileName + ".mp4"
+
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	// Seek to the start byte
+	_, err = file.Seek(startByte, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to seek to start byte: %v", err)
+	}
+
+	// Read the chunk
+	chunkSize := endByte - startByte + 1
+	chunk := make([]byte, chunkSize)
+	n, err := file.Read(chunk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read chunk from file: %v", err)
+	}
+	if int64(n) != chunkSize {
+		return nil, fmt.Errorf("unexpected chunk size read from file")
+	}
+
+	// Create and return the response
+	response := &pb.DownloadChunkResponse{
+		Chunk: chunk,
+	}
+	return response, nil
 }
 
 func (s *server) CheckFileExists(ctx context.Context, req *pb.CheckFileExistsRequest) (*pb.SuccessResponse, error) {
