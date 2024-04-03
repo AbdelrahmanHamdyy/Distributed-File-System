@@ -301,14 +301,42 @@ func main() {
 	portNumber1 := os.Args[2]
 	portNumber2 := os.Args[3]
 
+	idInt, Err := strconv.Atoi(id)
+	if Err != nil {
+		fmt.Println("Invalid id:", Err)
+		return
+	}
+
 	fmt.Println("ID:", id)
 	fmt.Println("Download port number:", portNumber1)
 	fmt.Println("Upload port number:", portNumber2)
 
-	idInt, err := strconv.Atoi(id)
+	// Send id, portNumber1, portNumber2 to master
+	Err = godotenv.Load()
+	if Err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Connecting with master
+	masterPort := os.Getenv("MASTER_PORT")
+	conn, err := grpc.Dial(masterPort, grpc.WithInsecure())
 	if err != nil {
-		fmt.Println("Invalid id:", err)
+		fmt.Println("did not connect:", err)
 		return
+	}
+	defer conn.Close()
+	c := ms.NewMasterTrackerServiceClient(conn)
+	resp, err := c.Join(context.Background(), &ms.JoinRequest{Id: int32(idInt), Address: portNumber1, GrpcAddress: portNumber2})
+	if err != nil {
+		fmt.Println("Error calling Join:", err)
+		return
+	}
+	successMsg := resp.GetSuccess()
+	if !successMsg {
+		fmt.Println("Error occured while joining the network")
+		return
+	} else {
+		fmt.Println("Joined the network successfully!")
 	}
 	
 	// Heartbeat

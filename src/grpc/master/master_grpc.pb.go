@@ -30,6 +30,8 @@ type MasterTrackerServiceClient interface {
 	RegisterFile(ctx context.Context, in *RegisterFileRequest, opts ...grpc.CallOption) (*RegisterFileResponse, error)
 	// Download file service for Client
 	DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (*DownloadFileResponse, error)
+	// Join service for DataNode
+	Join(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 }
 
 type masterTrackerServiceClient struct {
@@ -76,6 +78,15 @@ func (c *masterTrackerServiceClient) DownloadFile(ctx context.Context, in *Downl
 	return out, nil
 }
 
+func (c *masterTrackerServiceClient) Join(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*SuccessResponse, error) {
+	out := new(SuccessResponse)
+	err := c.cc.Invoke(ctx, "/master.MasterTrackerService/Join", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MasterTrackerServiceServer is the server API for MasterTrackerService service.
 // All implementations must embed UnimplementedMasterTrackerServiceServer
 // for forward compatibility
@@ -88,6 +99,8 @@ type MasterTrackerServiceServer interface {
 	RegisterFile(context.Context, *RegisterFileRequest) (*RegisterFileResponse, error)
 	// Download file service for Client
 	DownloadFile(context.Context, *DownloadFileRequest) (*DownloadFileResponse, error)
+	// Join service for DataNode
+	Join(context.Context, *JoinRequest) (*SuccessResponse, error)
 	mustEmbedUnimplementedMasterTrackerServiceServer()
 }
 
@@ -106,6 +119,9 @@ func (UnimplementedMasterTrackerServiceServer) RegisterFile(context.Context, *Re
 }
 func (UnimplementedMasterTrackerServiceServer) DownloadFile(context.Context, *DownloadFileRequest) (*DownloadFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DownloadFile not implemented")
+}
+func (UnimplementedMasterTrackerServiceServer) Join(context.Context, *JoinRequest) (*SuccessResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Join not implemented")
 }
 func (UnimplementedMasterTrackerServiceServer) mustEmbedUnimplementedMasterTrackerServiceServer() {}
 
@@ -192,6 +208,24 @@ func _MasterTrackerService_DownloadFile_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MasterTrackerService_Join_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JoinRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterTrackerServiceServer).Join(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/master.MasterTrackerService/Join",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterTrackerServiceServer).Join(ctx, req.(*JoinRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MasterTrackerService_ServiceDesc is the grpc.ServiceDesc for MasterTrackerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -214,6 +248,10 @@ var MasterTrackerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DownloadFile",
 			Handler:    _MasterTrackerService_DownloadFile_Handler,
+		},
+		{
+			MethodName: "Join",
+			Handler:    _MasterTrackerService_Join_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

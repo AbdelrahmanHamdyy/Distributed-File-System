@@ -19,7 +19,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-const numDataNodes = 3
 var clientPort string
 
 type masterServer struct {
@@ -39,9 +38,9 @@ type FileMetadata struct {
 	Size 	   int64  // File size
 }
 
-var dataNodesHeartbeats = make([]int, numDataNodes)
+var dataNodesHeartbeats = make(map[int32]int32)
 var fileLookupTable = make([]FileMetadata, 0)
-var dataNodeLookupTable = make([]dataNode, numDataNodes)
+var dataNodeLookupTable = make([]dataNode, 0)
 
 func (s *masterServer) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.HeartbeatResponse, error) {
 	id := req.GetDataNodeId()
@@ -50,6 +49,7 @@ func (s *masterServer) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) 
 }
 
 func (s *masterServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) (*pb.UploadFileResponse, error) {
+	numDataNodes := len(dataNodeLookupTable)
 	dataNodeId := rand.Intn(numDataNodes)
 	for !dataNodeLookupTable[dataNodeId].isAlive {
 		dataNodeId = rand.Intn(numDataNodes)
@@ -77,6 +77,7 @@ func notifyClient() {
 }
 
 func chooseOneRandomNode(dataNodeId int32) int32 {
+	numDataNodes := len(dataNodeLookupTable)
 	nodeId := rand.Intn(numDataNodes)
 	for nodeId == int(dataNodeId) || !dataNodeLookupTable[nodeId].isAlive {
 		nodeId = rand.Intn(numDataNodes)
@@ -85,6 +86,7 @@ func chooseOneRandomNode(dataNodeId int32) int32 {
 }
 
 func chooseTwoRandomNodes(dataNodeId int32) []int32 {
+	numDataNodes := len(dataNodeLookupTable)
 	// Pick the first Id
 	nodeIds := make([]int32, 2)
 	nodeIds[0] = chooseOneRandomNode(dataNodeId)
@@ -207,15 +209,22 @@ func (s *masterServer) DownloadFile(ctx context.Context, req *pb.DownloadFileReq
 func checkAliveDataNodes() {
 	for {
 		time.Sleep(2 * time.Second)
-		for i := 0; i < numDataNodes; i++ {
-			if dataNodesHeartbeats[i] == 0 {
-				fmt.Printf("Data Keeper node %d is dead\n", i)
+		for id := range dataNodesHeartbeats {
+			// Get index of the data node in the lookup table
+			i := 0
+			for i = 0; i < len(dataNodeLookupTable); i++ {
+				if dataNodeLookupTable[i].dataNodeId == id {
+					break
+				}
+			}
+			if dataNodesHeartbeats[id] == 0 {
+				fmt.Printf("Node %d is dead\n", dataNodeLookupTable[i].dataNodeId)
 				dataNodeLookupTable[i].isAlive = false
 			} else {
-				fmt.Printf("Data Keeper node %d is alive\n", i)
+				fmt.Printf("Node %d is alive\n", dataNodeLookupTable[i].dataNodeId)
 				dataNodeLookupTable[i].isAlive = true
 			}
-			dataNodesHeartbeats[i] = 0
+			dataNodesHeartbeats[id] = 0
 		}
 	}
 }
@@ -233,14 +242,13 @@ func Replication() {
 				conn, err := grpc.Dial(dataNodeLookupTable[file.DataNodeId].downloadAddress, grpc.WithInsecure())
 				if err != nil {
 					fmt.Println("Did not connect:", err)
-					return
+					continue
 				}
-				defer conn.Close()
 				c := dk.NewDataKeeperServiceClient(conn)
 				resp, err := c.CheckFileExists(context.Background(), &dk.CheckFileExistsRequest{Filepath: file.FilePath})
 				if err != nil {
 					fmt.Println("Error checking file:", err)
-					return
+					continue
 				}
 				if resp.GetSuccess() {
 					fileMap[file.FileName] = append(fileMap[file.FileName], file.DataNodeId)
@@ -248,6 +256,7 @@ func Replication() {
 					fmt.Printf("File %s no longer exists on Data Keeper %d\n", file.FileName, file.DataNodeId)
 					toBeRemoved[file.FileName] = append(toBeRemoved[file.FileName], file.DataNodeId)
 				}
+				conn.Close()
 			}
 		}
 
@@ -263,16 +272,22 @@ func Replication() {
 		}
 
 		// print fileMap
-		fmt.Println("------File Map------")
-		for key, value := range fileMap {
-			fmt.Println(key, value)
+		if len(fileMap) > 0 {
+			fmt.Println("------File Map------")
+			for key, value := range fileMap {
+				fmt.Println(key, value)
+			}
 		}
-
-		// print fileLookupTable
-		fmt.Println("------File Lookup Table------")
-		for _, file := range fileLookupTable {
-			fmt.Println(file.FileName, file.DataNodeId)
+		
+		if len(fileLookupTable) > 0 {
+			// print fileLookupTable
+			fmt.Println("------File Lookup Table------")
+			for _, file := range fileLookupTable {
+				fmt.Println(file.FileName, file.DataNodeId)
+			}
 		}
+		
+		numDataNodes := len(dataNodeLookupTable)
 
 		for fileName, nodes := range fileMap {
 			if len(nodes) < 3 {
@@ -291,17 +306,17 @@ func Replication() {
 					conn, err := grpc.Dial(dataNodeLookupTable[nodes[0]].downloadAddress, grpc.WithInsecure())
 					if err != nil {
 						fmt.Println("Did not connect:", err)
-						return
+						continue
 					}
-					defer conn.Close()
 					c := dk.NewDataKeeperServiceClient(conn)
 					tcpAddr := dataNodeLookupTable[destinationId].address
 					grpcAddr := dataNodeLookupTable[destinationId].downloadAddress
 					_, err = c.ReplicateFile(context.Background(), &dk.ReplicateFileRequest{FileName: fileName, TcpAddr: tcpAddr, GrpcAddr: grpcAddr})
 					if err != nil {
 						fmt.Println("Error replicating file:", err)
-						return
+						continue
 					}
+					conn.Close()
 				} else if len(nodes) == 1 {
 					chooseNodesToReplicate(fileName, nodes[0])
 				} else {
@@ -312,15 +327,28 @@ func Replication() {
 	}
 }
 
-func populateDataKeepers() {
-	dataNodeData := dataNode{dataNodeId: 0, address: "localhost:50051", downloadAddress: "localhost:50050", isAlive: true}
-	dataNodeLookupTable[0] = dataNodeData
-
-	dataNodeData = dataNode{dataNodeId: 1, address: "localhost:49152", downloadAddress: "localhost:49153", isAlive: true}
-	dataNodeLookupTable[1] = dataNodeData
-
-	dataNodeData = dataNode{dataNodeId: 2, address: "localhost:49154", downloadAddress: "localhost:49155", isAlive: true}
-	dataNodeLookupTable[2] = dataNodeData
+func (s *masterServer) Join(ctx context.Context, req *pb.JoinRequest) (*pb.SuccessResponse, error) {
+	id := req.GetId()
+	address := req.GetAddress()
+	grpcAddress := req.GetGrpcAddress()
+	// Check if the data node is already in the lookup table
+	for _, node := range dataNodeLookupTable {
+		if node.dataNodeId == id && !node.isAlive {
+			// If the data node is already in the lookup table, update the address and set isAlive to true
+			node.address = address
+			node.downloadAddress = grpcAddress
+			node.isAlive = true
+			fmt.Printf("Data Node %d rejoined\n", id)
+			return &pb.SuccessResponse{Success: true}, nil
+		} else if node.dataNodeId == id && node.isAlive {
+			return &pb.SuccessResponse{Success: false}, nil
+		}
+	}
+	dataNodeData := dataNode{dataNodeId: id, address: address, downloadAddress: grpcAddress, isAlive: true}
+	dataNodeLookupTable = append(dataNodeLookupTable, dataNodeData)
+	dataNodesHeartbeats[id] = 0
+	fmt.Printf("Data Node %d joined\n", id)
+	return &pb.SuccessResponse{Success: true}, nil
 }
 
 func main() {
@@ -335,8 +363,6 @@ func main() {
 		fmt.Println("failed to listen:", err)
 		return
 	}
-
-	populateDataKeepers()
 
 	s := grpc.NewServer()
 	pb.RegisterMasterTrackerServiceServer(s, &masterServer{})
