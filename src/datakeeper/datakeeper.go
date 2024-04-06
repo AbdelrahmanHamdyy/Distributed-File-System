@@ -226,6 +226,9 @@ func (s *server) DownloadChunk(ctx context.Context, req *pb.DownloadChunkRequest
 	response := &pb.DownloadChunkResponse{
 		Chunk: chunk,
 	}
+
+	fmt.Printf("Sent chunk of size %d bytes from %d to %d\n", n, startByte, endByte)
+
 	return response, nil
 }
 
