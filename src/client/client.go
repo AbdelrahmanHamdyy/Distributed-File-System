@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const PARALLEL_DOWNLOAD = true
+const PARALLEL_DOWNLOAD = false
 
 func getUserChoice() string {
 	var text string
