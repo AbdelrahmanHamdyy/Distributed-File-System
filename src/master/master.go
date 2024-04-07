@@ -41,6 +41,8 @@ var dataNodesHeartbeats = make(map[int32]int32)
 var fileLookupTable = make([]FileMetadata, 0)
 var dataNodeLookupTable = make(map[int32]dataNode)
 
+var allIds = make([]int32, 0)
+
 func (s *masterServer) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.HeartbeatResponse, error) {
 	id := req.GetDataNodeId()
 	dataNodesHeartbeats[id] += 1
@@ -48,14 +50,16 @@ func (s *masterServer) Heartbeat(ctx context.Context, req *pb.HeartbeatRequest) 
 }
 
 func (s *masterServer) UploadFile(ctx context.Context, req *pb.UploadFileRequest) (*pb.UploadFileResponse, error) {
-	numDataNodes := len(dataNodeLookupTable)
-	dataNodeId := int32(rand.Intn(numDataNodes))
+	clientPort = req.GetClientPort()
+
+	randomIndex := int32(rand.Intn(len(allIds)))
+	dataNodeId := allIds[randomIndex]
 	for !dataNodeLookupTable[dataNodeId].isAlive {
-		dataNodeId = int32(rand.Intn(numDataNodes))
+		randomIndex := int(rand.Intn(len(allIds)))
+		dataNodeId = allIds[randomIndex]
 	}
 	nodeAddr := dataNodeLookupTable[dataNodeId].address
 	grpcAddr := dataNodeLookupTable[dataNodeId].downloadAddress
-	clientPort = req.GetClientPort()
 	return &pb.UploadFileResponse{UploadAddress: nodeAddr , GrpcAddress: grpcAddr }, nil
 }
 
@@ -76,24 +80,27 @@ func notifyClient() {
 }
 
 func chooseOneRandomNode(dataNodeId int32) int32 {
-	numDataNodes := len(dataNodeLookupTable)
-	nodeId := int32(rand.Intn(numDataNodes))
+	randomIndex := int32(rand.Intn(len(allIds)))
+	nodeId := allIds[randomIndex]
+
 	for nodeId == dataNodeId || !dataNodeLookupTable[nodeId].isAlive {
-		nodeId = int32(rand.Intn(numDataNodes))
+		randomIndex = int32(rand.Intn(len(allIds)))
+		nodeId = allIds[randomIndex]
 	}
 	return int32(nodeId)
 }
 
 func chooseTwoRandomNodes(dataNodeId int32) []int32 {
-	numDataNodes := len(dataNodeLookupTable)
 	// Pick the first Id
 	nodeIds := make([]int32, 2)
 	nodeIds[0] = chooseOneRandomNode(dataNodeId)
 
 	// Pick the second Id
-	nodeId := int32(rand.Intn(numDataNodes))
+	randomIndex := int32(rand.Intn(len(allIds)))
+	nodeId := allIds[randomIndex]
 	for nodeId == dataNodeId || nodeId == nodeIds[0] || !dataNodeLookupTable[nodeId].isAlive {
-		nodeId = int32(rand.Intn(numDataNodes))
+		randomIndex := int32(rand.Intn(len(allIds)))
+		nodeId = allIds[randomIndex]
 	}
 	nodeIds[1] = int32(nodeId)
 
@@ -280,8 +287,6 @@ func Replication() {
 				fmt.Println(file.FileName, file.DataNodeId)
 			}
 		}
-		
-		numDataNodes := len(dataNodeLookupTable)
 
 		for fileName, nodes := range fileMap {
 			if len(nodes) < 3 {
@@ -292,9 +297,11 @@ func Replication() {
 						fmt.Print("[REPLICATION] There are only two alive data nodes.\n")
 						continue
 					}
-					destinationId := int32(rand.Intn(numDataNodes))
+					randomIndex := int32(rand.Intn(len(allIds)))
+					destinationId := allIds[randomIndex]
 					for destinationId == nodes[0] || destinationId == nodes[1] || !dataNodeLookupTable[destinationId].isAlive {
-						destinationId = int32(rand.Intn(numDataNodes))
+						randomIndex := int32(rand.Intn(len(allIds)))
+						destinationId = allIds[randomIndex]
 					}
 					fmt.Printf("Destination ID: %d\n", destinationId)
 					conn, err := grpc.Dial(dataNodeLookupTable[nodes[0]].downloadAddress, grpc.WithInsecure())
@@ -325,6 +332,7 @@ func (s *masterServer) Join(ctx context.Context, req *pb.JoinRequest) (*pb.Succe
 	id := req.GetId()
 	address := req.GetAddress()
 	grpcAddress := req.GetGrpcAddress()
+	allIds = append(allIds, id)
 	// Check if the data node is already in the lookup table
 	for dataNodeId, node := range dataNodeLookupTable {
 		if dataNodeId == id && !node.isAlive {
